@@ -30,8 +30,7 @@
         ]},
         { kind: "verse", lines: [
           { sin: "Faug na-ngalad. Sogon o-eithel Anor.", en: "Thirsty for light. I drink from the well of the Sun." },
-          { sin: "Gwanon o-dû. Cuil fîr, dan ú-firin.", en: "I leave the night. Life fades, but I do not fade." },
-          { sin: "Faug na-ngalad…", en: "Thirsty for light…" }
+          { sin: "Gwanon o-dû. Cuil fîr, dan ú-firin.", en: "I leave the night. Life fades, but I do not fade." }
         ]},
         { kind: "verse", lines: [
           { sin: "Cennin ernil rissar mi-dhû.", en: "I saw princes torn apart in the darkness." },
@@ -41,15 +40,14 @@
         ]},
         { kind: "bridge", lines: [
           { sin: "Luitho naur, luitho lach.", en: "Quench the fire, quench the flame." },
-          { sin: "Rif galu, ú-vatha nan.", en: "The bark grows, it feels nothing again." },
-          { sin: "Luitho naur…", en: "Quench the fire…" }
+          { sin: "Rif galu, ú-vatha nan.", en: "The bark grows, it feels nothing again." }
         ]},
         { kind: "chorus", lines: [
           { sin: "Gwanon o-anann. Ú-ben arya Arda!", en: "I leave the long-past. No one inherits Arda!" },
           { sin: "Gwanon o-anann. Ú-ben arya Arda!", en: "I leave the long-past. No one inherits Arda!" }
         ]},
         { kind: "outro", lines: [
-          { sin: "Arda… Gwanon…", en: "Arda… I leave…" }
+          { sin: "Luitho naur…", en: "Quench the fire…" }
         ]}
       ]
     },
