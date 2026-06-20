@@ -83,11 +83,8 @@
           { sin: "An-iergon uireb.", en: "For my longing is eternal." },
           { sin: "Dan faer nín… fîr.", en: "But my soul… fades." }
         ]},
-        { kind: "chorus", lines: [
-          { sin: "Menel nalla.", en: "Heaven weeps." },
-          { sin: "Faer nín gwedhinnen.", en: "My soul is bound." },
-          { sin: "Calad nín thilia.", en: "My light flickers." },
-          { sin: "Na-il glaw en-Ithil.", en: "At every radiance of the Moon." }
+        { kind: "outro", lines: [
+          { sin: "Na-i-dhae odog.", en: "At the seventh shadow." }
         ]}
       ]
     },
