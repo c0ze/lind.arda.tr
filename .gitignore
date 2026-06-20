@@ -3,3 +3,5 @@ node_modules/
 songs/*.wav
 .DS_Store
 .claude/settings.local.json
+.env
+.env.*

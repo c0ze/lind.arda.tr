@@ -113,6 +113,8 @@
 
     var audio = new Audio();
     audio.preload = "metadata";
+    var canFlac = !!(audio.canPlayType("audio/flac") || audio.canPlayType("audio/x-flac"));
+    var pickAudio = function (s) { return canFlac && s.audioFlac ? s.audioFlac : s.audio; };
     var scroller = el.querySelector(".lyrics__scroller");
     var lyricsBox = el.querySelector(".lyrics");
     var playBtn = el.querySelector(".btn-play");
@@ -164,7 +166,7 @@
       el.querySelector('[data-np="teng"]').textContent = teng(song.title);
       el.querySelector('[data-np="rom"]').textContent = song.title;
       el.querySelector('[data-np="en"]').textContent = song.titleEn;
-      audio.src = song.audio;
+      audio.src = pickAudio(song);
       renderLyrics(song);
       scroller.style.transform = "translateY(0)";
       lyricsBox.classList.remove("is-synced"); lyricsBox.classList.add("is-static");
@@ -221,7 +223,7 @@
     el.querySelectorAll(".track").forEach(function (t) {
       t.addEventListener("click", function () { selectTrack(+t.getAttribute("data-i")); });
       var i = +t.getAttribute("data-i");
-      var a = new Audio(); a.preload = "metadata"; a.src = SONGS[i].audio;
+      var a = new Audio(); a.preload = "metadata"; a.src = pickAudio(SONGS[i]);
       a.addEventListener("loadedmetadata", function () {
         el.querySelector('[data-dur="' + i + '"]').textContent = fmt(a.duration);
       });

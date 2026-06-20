@@ -9,6 +9,7 @@
       title: "Gwannad i-Lû",
       titleEn: "The Fading of Time",
       audio: "audio/gwannad-i-lu.mp3",
+      audioFlac: "audio/gwannad-i-lu.flac",
       lrc: "lyrics/gwannad-i-lu.lrc",
       duration: 226.12,
       sections: [
@@ -56,6 +57,7 @@
       title: "I Dhae Odog",
       titleEn: "The Seventh Shadow",
       audio: "audio/i-dhae-odog.mp3",
+      audioFlac: "audio/i-dhae-odog.flac",
       lrc: "lyrics/i-dhae-odog.lrc",
       duration: 128.56,
       sections: [
@@ -93,6 +95,7 @@
       title: "I Dann Haer",
       titleEn: "The Long Defeat",
       audio: "audio/i-dann-haer.mp3",
+      audioFlac: "audio/i-dann-haer.flac",
       lrc: "lyrics/i-dann-haer.lrc",
       duration: 164.96,
       sections: [
