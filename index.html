@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en" data-theme="twilight">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arda — songs in the grey-elven tongue</title>
+  <meta name="description" content="Arda — original songs in J.R.R. Tolkien's Sindarin, written in Tengwar with English translations. Laments of the Eldar: the fading of time, the seventh shadow, the long defeat." />
+  <meta name="color-scheme" content="dark" />
+  <meta property="og:title" content="Arda — songs in the grey-elven tongue" />
+  <meta property="og:description" content="Original songs in Sindarin, in Tengwar with English translations." />
+  <meta property="og:type" content="music.album" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="font" type="font/ttf" href="assets/fonts/tengwar-annatar-glaemunicode.ttf" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/app.css" />
+  <script>try{var t=localStorage.getItem("arda-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="wordmark" href="#top" aria-label="Arda — home">
+      <span class="teng" data-teng="Arda" aria-hidden="true"></span>
+      <span class="wordmark__rom">Arda</span>
+    </a>
+    <nav class="topnav" aria-label="Sections">
+      <a href="#stage">the stage</a>
+      <a href="#archive">the archive</a>
+      <a href="#colophon">colophon</a>
+    </nav>
+    <div class="themeswitch" role="group" aria-label="Theme">
+      <button type="button" data-theme-name="twilight" aria-pressed="true"><span class="dot"></span><span class="lbl">Twilight</span></button>
+      <button type="button" data-theme-name="moonlit" aria-pressed="false"><span class="dot"></span><span class="lbl">Moonlit</span></button>
+      <button type="button" data-theme-name="ember" aria-pressed="false"><span class="dot"></span><span class="lbl">Ember</span></button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero" id="hero">
+      <canvas class="hero__motes" aria-hidden="true"></canvas>
+      <div class="hero__inner">
+        <div class="hero__teng teng" data-teng="Arda" aria-hidden="true"></div>
+        <h1 class="hero__title">Arda</h1>
+        <p class="hero__tagline">Laments of the Eldar, in the grey-elven tongue</p>
+        <p class="hero__sub">Sindarin · Tengwar · three songs of fading light</p>
+        <a class="hero__cue" href="#stage" aria-label="Enter">
+          <span>enter</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+    </section>
+
+    <section class="stage" id="stage" aria-label="Player">
+      <!-- rendered by app.js -->
+    </section>
+
+    <section class="archive" id="archive" aria-label="All lyrics">
+      <header class="section-head">
+        <p class="section-kicker">the archive</p>
+        <h2>All lyrics &amp; translations</h2>
+        <p class="section-lede">Each song in full — the Tengwar script, the romanized Sindarin, and the English beneath. A songbook for reading with the sound off.</p>
+      </header>
+      <!-- songs rendered by app.js -->
+    </section>
+
+    <section class="colophon" id="colophon" aria-label="Colophon">
+      <header class="section-head">
+        <p class="section-kicker">colophon</p>
+        <h2>On the tongue &amp; the script</h2>
+      </header>
+      <div class="colophon__grid">
+        <p>The words are <strong>Sindarin</strong>, the Grey-elven tongue — chosen over the high Quenya for its dimmer, fading register. The script is <strong>Tengwar</strong>, set in the <em>general use</em> mode of Sindarin (vowels carried as tehtar above the consonants that follow them).</p>
+        <p>Tengwar is transcribed with <a href="https://jrrvf.com/~glaemscrafu/english/glaemscribe.html" rel="noopener">Glǽmscribe</a> and rendered in <strong>Tengwar Annatar</strong> by Johan Winge. The writing systems are the invention of <strong>J.R.R. Tolkien</strong>. Verify any line against <a href="https://www.tecendil.com" rel="noopener">Tecendil</a> in Sindarin mode.</p>
+        <p class="colophon__note">Three songs: <em>Gwannad i-Lû</em> (the fading of time), <em>I Dhae Odog</em> (the seventh shadow), <em>I Dann Haer</em> (the long defeat).</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span class="teng" data-teng="Arda" aria-hidden="true"></span>
+    <span>Arda · MMXXVI</span>
+  </footer>
+
+  <noscript>
+    <p style="padding:2rem;text-align:center">This player needs JavaScript. The lyrics &amp; translations are listed in the archive once enabled.</p>
+  </noscript>
+
+  <script src="data/songs.js"></script>
+  <script src="data/tengwar.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
