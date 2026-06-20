@@ -239,11 +239,18 @@ section.stage, section.archive, section.colophon {
 .btn-play:hover { background: var(--accent); color: var(--bg); box-shadow: 0 0 22px var(--glow); }
 .btn-play svg { width: 22px; height: 22px; }
 .time { font-size: 0.92rem; letter-spacing: 0.06em; color: var(--muted); min-width: 3.2em; text-align: center; }
-.scrub { flex: 1; appearance: none; -webkit-appearance: none; height: 3px; border-radius: 2px;
+.scrub, .vol__slider { appearance: none; -webkit-appearance: none; height: 3px; border-radius: 2px;
   background: var(--hair); cursor: pointer; }
-.scrub::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%;
+.scrub { flex: 1; }
+.vol { display: flex; align-items: center; gap: 0.5rem; flex: none; }
+.vol__slider { width: 84px; }
+.vol__btn { background: none; border: none; color: var(--muted); cursor: pointer; display: grid;
+  place-items: center; padding: 0; transition: color 0.3s; }
+.vol__btn:hover { color: var(--accent); }
+.vol__btn svg { width: 20px; height: 20px; }
+.scrub::-webkit-slider-thumb, .vol__slider::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%;
   background: var(--accent-bright); box-shadow: 0 0 10px var(--glow); cursor: pointer; }
-.scrub::-moz-range-thumb { width: 13px; height: 13px; border: none; border-radius: 50%;
+.scrub::-moz-range-thumb, .vol__slider::-moz-range-thumb { width: 13px; height: 13px; border: none; border-radius: 50%;
   background: var(--accent-bright); box-shadow: 0 0 10px var(--glow); cursor: pointer; }
 
 .viewtoggle { display: flex; justify-content: center; gap: 0.3rem; margin-top: 1.6rem; }
@@ -295,6 +302,7 @@ section.stage, section.archive, section.colophon {
 /* --- responsive --------------------------------------------------------- */
 @media (max-width: 760px) {
   .topnav { display: none; }
+  .vol { display: none; }
   .themeswitch .lbl { display: none; }
   .themeswitch button { padding: 0.4rem; }
   body { font-size: 18px; }

@@ -70,6 +70,8 @@
   /* --- the stage -------------------------------------------------------- */
   var PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>';
   var PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" fill="currentColor"/><rect x="14" y="5" width="4" height="14" fill="currentColor"/></svg>';
+  var VOL_ON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 8.8a4 4 0 0 1 0 6.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M19 6.5a7 7 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  var VOL_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
 
   function buildStage() {
     var el = document.getElementById("stage");
@@ -97,6 +99,10 @@
         '<span class="time time--cur">0:00</span>' +
         '<input class="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek" />' +
         '<span class="time time--dur">0:00</span>' +
+        '<div class="vol">' +
+          '<button class="vol__btn" type="button" aria-label="Mute"></button>' +
+          '<input class="vol__slider" type="range" min="0" max="100" value="100" step="1" aria-label="Volume" />' +
+        '</div>' +
       '</div>' +
       '<div class="viewtoggle" role="group" aria-label="Lyric view">' +
         '<button type="button" data-view="teng">Tengwar</button>' +
@@ -193,6 +199,24 @@
       var d = audio.duration || 0;
       if (d) audio.currentTime = (scrub.value / 1000) * d;
     });
+
+    var volSlider = el.querySelector(".vol__slider");
+    var volBtn = el.querySelector(".vol__btn");
+    var lastVol = 1;
+    function applyVol(v, save) {
+      v = Math.min(1, Math.max(0, v));
+      audio.volume = v;
+      if (v > 0) lastVol = v;
+      volSlider.value = Math.round(v * 100);
+      volSlider.style.background = "linear-gradient(to right, var(--accent) " + v * 100 + "%, var(--hair) " + v * 100 + "%)";
+      volBtn.innerHTML = v <= 0 ? VOL_OFF : VOL_ON;
+      volBtn.setAttribute("aria-label", v <= 0 ? "Unmute" : "Mute");
+      if (save) localStorage.setItem("arda-volume", String(v));
+    }
+    var savedVol = parseFloat(localStorage.getItem("arda-volume"));
+    applyVol(isNaN(savedVol) ? 1 : savedVol, false);
+    volSlider.addEventListener("input", function () { applyVol(volSlider.value / 100, true); });
+    volBtn.addEventListener("click", function () { applyVol(audio.volume > 0 ? 0 : lastVol || 1, true); });
 
     el.querySelectorAll(".track").forEach(function (t) {
       t.addEventListener("click", function () { selectTrack(+t.getAttribute("data-i")); });
