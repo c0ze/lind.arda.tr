@@ -7,8 +7,18 @@ Drop one timed `.lrc` file per song here, named by song id:
 - `i-dann-haer.lrc`
 
 Produce them with the **lyrics-sync** tool (`~/projects/music/lyrics-sync`):
-load the matching audio and the romanized Sindarin lines, tap each line in time
-with the spacebar, then export the `.lrc`.
+
+1. Load the song's audio (`../audio/<id>.mp3` or the WAV master).
+2. Load the matching ready-made text sheet from this folder: `<id>.txt`
+   (`gwannad-i-lu.txt`, `i-dhae-odog.txt`, `i-dann-haer.txt`) — one romanized
+   Sindarin line per lyric line, section-spaced (the tool skips blank lines).
+3. Play, and tap **Space** as each line lands.
+4. **Stamp every line** — the tool only exports lines that got a timestamp, so a
+   skipped line would shift everything after it out of alignment.
+5. Export the `.lrc` and save it here as `<id>.lrc`.
+
+The `.txt` sheets are generated from `../data/songs.js` by
+`node ../scripts/build-lyrics-txt.mjs` — regenerate them if you edit the lyrics.
 
 **How sync works.** The page reads the `.lrc` timestamps in order and zips them
 to the song's lyric lines **by index** — so the text inside the `.lrc` does not
