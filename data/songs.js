@@ -125,6 +125,21 @@
           { sin: "Na-dhûr en-ann-gwelu.", en: "By the darkness of long-fading." },
           { sin: "Erui… Erui…", en: "Alone… Alone…" }
         ]},
+        { kind: "chorus", lines: [
+          { sin: "Cuil nín, ann.", en: "My life, long." },
+          { sin: "Cuil dîn, thent.", en: "Their life, short." },
+          { sin: "Darthon erui.", en: "I remain alone." },
+          { sin: "Mi-dhû en-Amar.", en: "In the night of the World." }
+        ]},
+        { kind: "refrain", lines: [
+          { sin: "Erui… Erui…", en: "Alone… Alone…" }
+        ]},
+        { kind: "chorus", lines: [
+          { sin: "Cuil nín, ann.", en: "My life, long." },
+          { sin: "Cuil dîn, thent.", en: "Their life, short." },
+          { sin: "Darthon erui.", en: "I remain alone." },
+          { sin: "Mi-dhû en-Amar.", en: "In the night of the World." }
+        ]},
         { kind: "outro", lines: [
           { sin: "Amar… Erui…", en: "The World… Alone…" }
         ]}
