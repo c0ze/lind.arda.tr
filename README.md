@@ -22,7 +22,7 @@ python3 -m http.server 8777
 ```
 index.html            markup shell (hero, stage, archive, colophon)
 assets/app.css        three themes + all components
-assets/app.js         player, LRC sync, themes, archive, hero motes
+assets/app.js         player, LRC sync, Media Session, share links, themes, archive, hero motes
 assets/fonts/         Tengwar Annatar (glaem-unicode .ttf)
 data/songs.js         canonical lyrics: Sindarin + English per line  ← edit here
 data/tengwar.js       generated Tengwar per line (do not hand-edit)

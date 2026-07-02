@@ -74,6 +74,8 @@
   var VOL_OFF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
   var NEXT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" fill="currentColor"/></svg>';
   var LOOP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" fill="currentColor"/></svg>';
+  var SHARE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5.5" r="2.4" fill="currentColor"/><circle cx="6" cy="12" r="2.4" fill="currentColor"/><circle cx="18" cy="18.5" r="2.4" fill="currentColor"/><path d="M8.2 10.8l7.6-4.1M8.2 13.2l7.6 4.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  var CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.6l4.6 4.6L19 7.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   function buildStage() {
     var el = document.getElementById("stage");
@@ -103,6 +105,7 @@
         '<input class="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek" />' +
         '<span class="time time--dur">0:00</span>' +
         '<button class="btn-loop" type="button" aria-label="Loop album" aria-pressed="false">' + LOOP + '</button>' +
+        '<button class="btn-share" type="button" aria-label="Copy link to this moment">' + SHARE + '</button>' +
         '<div class="vol">' +
           '<button class="vol__btn" type="button" aria-label="Mute"></button>' +
           '<input class="vol__slider" type="range" min="0" max="100" value="100" step="1" aria-label="Volume" />' +
@@ -129,6 +132,19 @@
 
     var state = { i: -1, lines: [], times: null, active: -1 };
     var allowPlay = false;   // play-gate: only let audio play when we intend to
+
+    /* share-link hash: "#t=SECONDS[&song=ID]" — plain seconds (decimals ok),
+       ID as in data/songs.js, e.g. "#t=42.5&song=i-dhae-odog". Autoplay is
+       blocked, so the seek waits until the visitor first presses play. */
+    var pendingSeek = null;
+    var startIndex = 0;
+    location.hash.replace(/^#/, "").split("&").forEach(function (kv) {
+      var eq = kv.indexOf("="); if (eq < 0) return;
+      var k = kv.slice(0, eq), v = kv.slice(eq + 1);
+      try { v = decodeURIComponent(v); } catch (e) {}
+      if (k === "t") { var t = parseFloat(v); if (isFinite(t) && t >= 0) pendingSeek = t; }
+      if (k === "song") SONGS.forEach(function (s, idx) { if (s.id === v) startIndex = idx; });
+    });
 
     function renderLyrics(song) {
       state.lines = flatten(song);
@@ -171,10 +187,12 @@
       el.querySelector('[data-np="teng"]').textContent = teng(song.title);
       el.querySelector('[data-np="rom"]').textContent = song.title;
       el.querySelector('[data-np="en"]').textContent = song.titleEn;
+      if (pendingSeek != null && i !== startIndex) pendingSeek = null;   // the seek belongs to the linked track
       allowPlay = false;
       audio.pause();              // src changes don't reliably fire pause (Safari) and can auto-resume (Chromium)
       audio.src = pickAudio(song);
-      playBtn.innerHTML = PLAY; playBtn.setAttribute("aria-label", "Play");
+      playBtn.innerHTML = PLAY; playBtn.setAttribute("aria-label", "Play"); setPlaybackState("paused");
+      updateMediaSession(song);
       renderLyrics(song);
       scroller.style.transform = "translateY(0)";
       lyricsBox.classList.remove("is-synced"); lyricsBox.classList.add("is-static");
@@ -190,8 +208,8 @@
     }
 
     playBtn.addEventListener("click", function () { if (audio.paused) startPlay(); else audio.pause(); });
-    audio.addEventListener("play", function () { if (!allowPlay) { audio.pause(); return; } playBtn.innerHTML = PAUSE; playBtn.setAttribute("aria-label", "Pause"); });
-    audio.addEventListener("pause", function () { playBtn.innerHTML = PLAY; playBtn.setAttribute("aria-label", "Play"); });
+    audio.addEventListener("play", function () { if (!allowPlay) { audio.pause(); return; } playBtn.innerHTML = PAUSE; playBtn.setAttribute("aria-label", "Pause"); setPlaybackState("playing"); });
+    audio.addEventListener("pause", function () { playBtn.innerHTML = PLAY; playBtn.setAttribute("aria-label", "Play"); setPlaybackState("paused"); });
     audio.addEventListener("loadedmetadata", function () { durT.textContent = fmt(audio.duration); });
     audio.addEventListener("timeupdate", function () {
       var d = audio.duration || SONGS[state.i].duration || 0;
@@ -246,15 +264,36 @@
       });
     });
 
-    /* --- transport: next / loop ------------------------------------------ */
+    /* --- transport: next / loop / lock-screen (Media Session) ------------- */
     var nextBtn = el.querySelector(".btn-next");
     var loopBtn = el.querySelector(".btn-loop");
     var loopMode = localStorage.getItem("arda-loop") !== "0";   // album-loop, default on
     loopBtn.setAttribute("aria-pressed", String(loopMode));
 
-    function startPlay() { allowPlay = true; audio.play(); }
+    function applyPendingSeek() {   // deferred "#t=" seek — see the hash comment above
+      if (pendingSeek == null) return;
+      var t = pendingSeek, was = state.i;
+      pendingSeek = null;
+      var evs = ["loadedmetadata", "canplay", "progress"];
+      function ready() {   // metadata in and the target inside a seekable range
+        if (audio.readyState < 1) return false;
+        if (isFinite(audio.duration)) t = Math.min(t, audio.duration);
+        var s = audio.seekable;
+        for (var k = 0; k < s.length; k++) { if (t >= s.start(k) && t <= s.end(k)) return true; }
+        return false;
+      }
+      function stop() { evs.forEach(function (e) { audio.removeEventListener(e, trySeek); }); }
+      function trySeek() {
+        if (state.i !== was) { stop(); return; }   // switched tracks — the link's moment is gone
+        if (ready()) { stop(); audio.currentTime = t; }
+      }
+      if (ready()) { audio.currentTime = t; return; }
+      evs.forEach(function (e) { audio.addEventListener(e, trySeek); });
+    }
+    function startPlay() { allowPlay = true; applyPendingSeek(); audio.play(); }
     function playIndex(i) { selectTrack(i); startPlay(); }
     function next() { playIndex((state.i + 1) % SONGS.length); }
+    function prev() { playIndex((state.i - 1 + SONGS.length) % SONGS.length); }
 
     nextBtn.addEventListener("click", next);
     loopBtn.addEventListener("click", function () {
@@ -264,7 +303,57 @@
     });
     audio.addEventListener("ended", function () { if (loopMode) next(); });
 
-    selectTrack(0);
+    function setPlaybackState(s) {
+      if ("mediaSession" in navigator) { try { navigator.mediaSession.playbackState = s; } catch (e) {} }
+    }
+    function updateMediaSession(song) {
+      if (!("mediaSession" in navigator) || typeof window.MediaMetadata !== "function") return;
+      try {   // no cover image ships with the site, so no artwork entry
+        navigator.mediaSession.metadata = new window.MediaMetadata({
+          title: song.title + " — " + song.titleEn, artist: "Arda"
+        });
+      } catch (e) {}
+    }
+    if ("mediaSession" in navigator) {
+      try {
+        navigator.mediaSession.setActionHandler("play", function () { startPlay(); });
+        navigator.mediaSession.setActionHandler("pause", function () { audio.pause(); });
+        navigator.mediaSession.setActionHandler("nexttrack", next);
+        navigator.mediaSession.setActionHandler("previoustrack", prev);
+      } catch (e) {}
+    }
+
+    /* --- share: copy a "#t=" link to the current moment -------------------- */
+    var shareBtn = el.querySelector(".btn-share");
+    var shareTimer = null;
+    function shareUrl() {
+      return location.origin + location.pathname + location.search +
+        "#t=" + Math.max(0, audio.currentTime || 0).toFixed(1) +
+        "&song=" + encodeURIComponent(SONGS[state.i].id);
+    }
+    function copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+      return new Promise(function (resolve, reject) {
+        var ta = document.createElement("textarea");
+        ta.value = text; ta.setAttribute("readonly", "");
+        ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy") ? resolve() : reject(new Error("copy failed")); }
+        catch (e) { reject(e); }
+        document.body.removeChild(ta);
+      });
+    }
+    shareBtn.addEventListener("click", function () {
+      copyText(shareUrl()).then(function () {
+        shareBtn.innerHTML = CHECK; shareBtn.classList.add("is-copied");
+        clearTimeout(shareTimer);
+        shareTimer = setTimeout(function () {
+          shareBtn.innerHTML = SHARE; shareBtn.classList.remove("is-copied");
+        }, 1500);
+      }).catch(function () {});
+    });
+
+    selectTrack(startIndex);
     window.ardaPlay = function (i) { selectTrack(i); document.getElementById("stage").scrollIntoView(); startPlay(); };
   }
 
