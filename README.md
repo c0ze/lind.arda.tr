@@ -84,3 +84,11 @@ site only — `docs/` and `scripts/` are excluded from the artifact, and
 - Sindarin and the Tengwar writing system are the invention of **J.R.R.
   Tolkien**.
 - Type: Cinzel + Cormorant Garamond.
+
+## License
+
+The site and player code is [MIT-licensed](./LICENSE). The music, lyrics,
+recordings, and artwork are © Arda Karaduman, all rights reserved — listening
+and sharing links is what the site is for; for any other use, please get in
+touch first (generated on a paid Suno plan; see Credits for third-party type
+and transcription tooling).
