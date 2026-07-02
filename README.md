@@ -26,7 +26,7 @@ assets/app.js         player, LRC sync, themes, archive, hero motes
 assets/fonts/         Tengwar Annatar (glaem-unicode .ttf)
 data/songs.js         canonical lyrics: Sindarin + English per line  ← edit here
 data/tengwar.js       generated Tengwar per line (do not hand-edit)
-audio/                web MP3s (transcoded from songs/)
+audio/                lossless FLAC + MP3 fallback per song
 lyrics/               drop synced .lrc files here (see lyrics/README.md)
 songs/                WAV masters (git-ignored)
 scripts/              one-time asset generators
@@ -35,13 +35,23 @@ docs/superpowers/specs/  the design spec
 
 ## Regenerating assets
 
-The two scripts only need to run when the source material changes; the site
-itself needs neither.
+The scripts only need to run when the source material changes; the site itself
+needs none of them.
 
-**Audio** — transcode the WAV masters to web MP3:
+**Audio** — each song ships as lossless FLAC with an MP3 fallback;
+`assets/app.js` plays the FLAC wherever `canPlayType("audio/flac")` says the
+browser can. The FLACs are the mastered tracks committed as-is; the script
+regenerates only the MP3 fallbacks from the WAV masters:
 
 ```bash
 bash scripts/transcode-audio.sh
+```
+
+**Lyric sheets** — after editing `data/songs.js`, refresh the plain-text sheets
+in `lyrics/` that the lyrics-sync tool consumes (see `lyrics/README.md`):
+
+```bash
+node scripts/build-lyrics-txt.mjs
 ```
 
 **Tengwar** — after editing `data/songs.js`, regenerate the script:
@@ -60,9 +70,11 @@ fix in `data/songs.js`, then re-run.
 
 ## Deploy
 
-Same static pattern as `lyrics-sync`: commit the files, add a `CNAME` +
-`.nojekyll`, and a GitHub Pages workflow. Everything except `songs/*.wav` and
-`.tooling/` is shippable.
+Pushes to `main` deploy automatically: `.github/workflows/deploy-pages.yml`
+publishes the site to GitHub Pages at [lind.arda.tr](https://lind.arda.tr)
+(`CNAME` and `.nojekyll` live in the repo root). The workflow ships the static
+site only — `docs/` and `scripts/` are excluded from the artifact, and
+`songs/*.wav` and `.tooling/` are git-ignored, so none of it ever ships.
 
 ## Credits
 
