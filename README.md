@@ -17,6 +17,21 @@ python3 -m http.server 8777
 # open http://localhost:8777
 ```
 
+## Tests
+
+Node 24 runs the player regression tests against a simulated DOM and audio
+transport. These are development dependencies only; the published site still
+has no runtime dependencies or build step.
+
+```bash
+npm ci
+npm test
+```
+
+The deployment workflow runs the suite before publishing and includes only
+`index.html`, `CNAME`, `.nojekyll`, `LICENSE`, `assets/`, `audio/`, `data/`, and
+`lyrics/` in the site artifact.
+
 ## Structure
 
 ```

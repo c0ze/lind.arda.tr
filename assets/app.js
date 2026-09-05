@@ -8,6 +8,12 @@
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function teng(s) { return T[s] || s; }
+  function readPreference(key) {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+  }
+  function writePreference(key, value) {
+    try { localStorage.setItem(key, value); } catch (e) {}
+  }
   function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
   function fmt(t) {
     if (!isFinite(t) || t < 0) t = 0;
@@ -31,7 +37,7 @@
 
   /* --- theme switch ----------------------------------------------------- */
   function initThemes() {
-    var saved = localStorage.getItem("arda-theme");
+    var saved = readPreference("arda-theme");
     if (saved) document.documentElement.setAttribute("data-theme", saved);
     var current = document.documentElement.getAttribute("data-theme");
     document.querySelectorAll(".themeswitch button").forEach(function (b) {
@@ -39,7 +45,7 @@
       b.setAttribute("aria-pressed", String(name === current));
       b.addEventListener("click", function () {
         document.documentElement.setAttribute("data-theme", name);
-        localStorage.setItem("arda-theme", name);
+        writePreference("arda-theme", name);
         document.querySelectorAll(".themeswitch button").forEach(function (x) {
           x.setAttribute("aria-pressed", String(x === b));
         });
@@ -131,6 +137,7 @@
     var hint = el.querySelector(".lyrics-hint");
 
     var state = { i: -1, lines: [], times: null, active: -1 };
+    var selection = 0;
     var allowPlay = false;   // play-gate: only let audio play when we intend to
 
     /* share-link hash: "#t=SECONDS[&song=ID]" — plain seconds (decimals ok),
@@ -157,13 +164,17 @@
       scroller.querySelectorAll(".lyric").forEach(function (node) {
         node.addEventListener("click", function () {
           var idx = +node.getAttribute("data-idx");
-          if (state.times && state.times[idx] != null) { audio.currentTime = state.times[idx]; audio.play(); }
+          if (state.times && state.times[idx] != null) {
+            pendingSeek = null;
+            audio.currentTime = state.times[idx];
+            startPlay();
+          }
         });
       });
     }
 
-    function setActive(idx) {
-      if (idx === state.active) return;
+    function setActive(idx, force) {
+      if (idx === state.active && !force) return;
       state.active = idx;
       var nodes = scroller.children;
       for (var k = 0; k < nodes.length; k++) {
@@ -174,11 +185,14 @@
       if (node) {
         var y = lyricsBox.clientHeight / 2 - (node.offsetTop + node.offsetHeight / 2);
         scroller.style.transform = "translateY(" + y + "px)";
+      } else {
+        scroller.style.transform = "translateY(0px)";
       }
     }
 
     function selectTrack(i) {
       if (i === state.i) return;
+      var requestSelection = ++selection;
       state.i = i; state.active = -1; state.times = null;
       var song = SONGS[i];
       Array.prototype.forEach.call(el.querySelectorAll(".track"), function (t) {
@@ -198,6 +212,7 @@
       lyricsBox.classList.remove("is-synced"); lyricsBox.classList.add("is-static");
       hint.textContent = "";
       loadLrc(song).then(function (times) {
+        if (requestSelection !== selection) return;
         if (times && times.length) {
           state.times = times;
           lyricsBox.classList.add("is-synced"); lyricsBox.classList.remove("is-static");
@@ -220,7 +235,7 @@
       if (state.times) {
         var a = -1;
         for (var k = 0; k < state.times.length; k++) { if (state.times[k] <= audio.currentTime) a = k; else break; }
-        if (a >= 0) setActive(a);
+        setActive(a);
       }
     });
     scrub.addEventListener("input", function () {
@@ -239,9 +254,9 @@
       volSlider.style.background = "linear-gradient(to right, var(--accent) " + v * 100 + "%, var(--hair) " + v * 100 + "%)";
       volBtn.innerHTML = v <= 0 ? VOL_OFF : VOL_ON;
       volBtn.setAttribute("aria-label", v <= 0 ? "Unmute" : "Mute");
-      if (save) localStorage.setItem("arda-volume", String(v));
+      if (save) writePreference("arda-volume", String(v));
     }
-    var savedVol = parseFloat(localStorage.getItem("arda-volume"));
+    var savedVol = parseFloat(readPreference("arda-volume"));
     applyVol(isNaN(savedVol) ? 1 : savedVol, false);
     volSlider.addEventListener("input", function () { applyVol(volSlider.value / 100, true); });
     volBtn.addEventListener("click", function () { applyVol(audio.volume > 0 ? 0 : lastVol || 1, true); });
@@ -260,14 +275,14 @@
         var v = b.getAttribute("data-view");
         lyricsBox.setAttribute("data-view", v);
         el.querySelectorAll(".viewtoggle button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
-        if (state.active >= 0) setActive(state.active);
+        if (state.active >= 0) setActive(state.active, true);
       });
     });
 
     /* --- transport: next / loop / lock-screen (Media Session) ------------- */
     var nextBtn = el.querySelector(".btn-next");
     var loopBtn = el.querySelector(".btn-loop");
-    var loopMode = localStorage.getItem("arda-loop") !== "0";   // album-loop, default on
+    var loopMode = readPreference("arda-loop") !== "0";   // album-loop, default on
     loopBtn.setAttribute("aria-pressed", String(loopMode));
 
     function applyPendingSeek() {   // deferred "#t=" seek — see the hash comment above
@@ -298,7 +313,7 @@
     nextBtn.addEventListener("click", next);
     loopBtn.addEventListener("click", function () {
       loopMode = !loopMode;
-      localStorage.setItem("arda-loop", loopMode ? "1" : "0");
+      writePreference("arda-loop", loopMode ? "1" : "0");
       loopBtn.setAttribute("aria-pressed", String(loopMode));
     });
     audio.addEventListener("ended", function () { if (loopMode) next(); });
