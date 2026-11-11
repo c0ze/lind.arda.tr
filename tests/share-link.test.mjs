@@ -60,6 +60,8 @@ test('an unknown song id drops the time instead of seeking the first track', asy
 test('a share link brings the player into view and shows the linked time', async (t) => {
   const p = await player(t, { hash: '#t=1:30&song=b' });
   assert.ok(p.scrolled.includes(p.query('#stage')));
+  // instant on page load: a smooth scroll started during load can be cut short
+  assert.equal(p.scrollOptions[p.scrolled.indexOf(p.query('#stage'))]?.behavior, 'instant');
   assert.equal(p.query('.time--cur').textContent, '1:30');
 });
 

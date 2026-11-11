@@ -550,18 +550,21 @@
       });
     });
 
-    function followShareLink(link) {
+    function followShareLink(link, onLoad) {
       if (link.i !== state.i) selectTrack(link.i, link.t);
       else if (link.t != null) {
         dropPendingSeek();
         pendingSeek = link.t;
         if (allowPlay && !audio.paused) applyPendingSeek(); else showPosition(link.t);
       }
-      el.scrollIntoView();
+      // On page load jump straight there: a smooth scroll (html has
+      // scroll-behavior: smooth) can be cut short while the page settles.
+      try { el.scrollIntoView(onLoad ? { block: "start", behavior: "instant" } : { block: "start" }); }
+      catch (e) { el.scrollIntoView(true); }
     }
     var link = readShareLink();
     selectTrack(link ? link.i : 0, link && link.t);
-    if (link) followShareLink(link);
+    if (link) followShareLink(link, true);
     window.addEventListener("hashchange", function () {
       var next = readShareLink();
       if (next) followShareLink(next);

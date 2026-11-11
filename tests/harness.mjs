@@ -40,8 +40,8 @@ export async function player(t, opts = {}) {
   }
   if (!keepCanvas) w.document.querySelector('canvas').remove();
   w.matchMedia = () => ({ matches: reduce });
-  const scrolled = [];
-  w.HTMLElement.prototype.scrollIntoView = function () { scrolled.push(this); };
+  const scrolled = [], scrollOptions = [];
+  w.HTMLElement.prototype.scrollIntoView = function (opts) { scrolled.push(this); scrollOptions.push(opts); };
   for (const [k, v] of Object.entries(storage)) w.localStorage.setItem(k, v);
   if (blockedStorage) {
     w.Storage.prototype.getItem = () => { throw new Error('Storage blocked'); };
@@ -98,7 +98,7 @@ export async function player(t, opts = {}) {
   w.eval(source);
   const query = (selector) => w.document.querySelector(selector);
   return {
-    w, audio: audio[0], audios: audio, requests, session, scrolled, query,
+    w, audio: audio[0], audios: audio, requests, session, scrolled, scrollOptions, query,
     all: (selector) => [...w.document.querySelectorAll(selector)],
     current: () => [...w.document.querySelectorAll('.track')].findIndex((x) => x.getAttribute('aria-current') === 'true'),
     async lyrics(index, text) {
