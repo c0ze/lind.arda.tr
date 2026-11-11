@@ -151,6 +151,7 @@
         '<div class="np__en" data-np="en"></div></div>' +
       '<div class="lyrics" data-view="all"><div class="lyrics__scroller"></div></div>' +
       '<p class="lyrics-hint"></p>' +
+      '<p class="player-status" role="status"></p>' +
       '<div class="controls">' +
         '<button class="btn-play" type="button" aria-label="Play">' + PLAY + '</button>' +
         '<button class="btn-next" type="button" aria-label="Next track">' + NEXT + '</button>' +
@@ -182,6 +183,7 @@
     var curT = el.querySelector(".time--cur");
     var durT = el.querySelector(".time--dur");
     var hint = el.querySelector(".lyrics-hint");
+    var statusLine = el.querySelector(".player-status");
 
     var state = { i: -1, lines: [], times: null, active: -1 };
     var selection = 0;
@@ -190,6 +192,7 @@
     /* share links (see readShareLink): the linked moment waits in pendingSeek */
     var pendingSeek = null;          // seconds to start the selected track at, on the next play
     var cancelDeferredSeek = null;   // set while that seek waits for the media to become seekable
+    var deferredSeekAt = null;       // ...and the time it waits to seek to
     function dropPendingSeek() {     // the visitor chose a moment themselves: forget the link's
       pendingSeek = null;
       if (cancelDeferredSeek) cancelDeferredSeek();
@@ -253,8 +256,9 @@
       el.querySelector('[data-np="en"]').textContent = song.titleEn;
       allowPlay = false;
       audio.pause();              // src changes don't reliably fire pause (Safari) and can auto-resume (Chromium)
-      audio.src = pickAudio(song);
-      playBtn.innerHTML = PLAY; playBtn.setAttribute("aria-label", "Play"); setPlaybackState("paused");
+      audio.src = state.src = pickAudio(song);
+      statusLine.textContent = "";
+      showPaused();
       updateMediaSession(song);
       if (startAt != null) pendingSeek = startAt;
       showPosition(pendingSeek || 0);
@@ -275,7 +279,27 @@
 
     playBtn.addEventListener("click", function () { if (audio.paused) startPlay(); else audio.pause(); });
     audio.addEventListener("play", function () { if (!allowPlay) { audio.pause(); return; } playBtn.innerHTML = PAUSE; playBtn.setAttribute("aria-label", "Pause"); setPlaybackState("playing"); });
-    audio.addEventListener("pause", function () { playBtn.innerHTML = PLAY; playBtn.setAttribute("aria-label", "Play"); setPlaybackState("paused"); });
+    audio.addEventListener("pause", showPaused);
+    function showPaused() { playBtn.innerHTML = PLAY; playBtn.setAttribute("aria-label", "Play"); setPlaybackState("paused"); }
+
+    /* A source that fails to load: a FLAC gets one retry as the song's MP3,
+       from the same moment and in the same play state; otherwise say so. */
+    audio.addEventListener("error", function () {
+      var song = SONGS[state.i];
+      if (state.src === song.audioFlac && song.audio && song.audio !== song.audioFlac) {
+        var playing = allowPlay;
+        var at = deferredSeekAt != null ? deferredSeekAt : pendingSeek != null ? pendingSeek : audio.currentTime;
+        dropPendingSeek();
+        audio.src = state.src = song.audio;
+        if (at > 0) pendingSeek = at;
+        if (playing) startPlay(); else showPosition(at || 0);
+        return;
+      }
+      allowPlay = false;
+      audio.pause();
+      showPaused();
+      statusLine.textContent = "This song couldn\u2019t be loaded. Check your connection, then press play to try again.";
+    });
     audio.addEventListener("loadedmetadata", function () { durT.textContent = fmt(audio.duration); });
     audio.addEventListener("timeupdate", function () {   // (a src change resets the media to 0)
       showPosition(pendingSeek != null && audio.paused ? pendingSeek : audio.currentTime);
@@ -349,14 +373,27 @@
       }
       function stop() {
         evs.forEach(function (e) { audio.removeEventListener(e, trySeek); });
-        cancelDeferredSeek = null;
+        cancelDeferredSeek = deferredSeekAt = null;
       }
       function trySeek() { if (ready()) { stop(); seek(); } }
       if (ready()) { seek(); return; }
       evs.forEach(function (e) { audio.addEventListener(e, trySeek); });
       cancelDeferredSeek = stop;   // selectTrack, a lyric click or the scrubber call it
+      deferredSeekAt = t;
     }
-    function startPlay() { allowPlay = true; applyPendingSeek(); audio.play(); }
+    var playRequest = 0;
+    function startPlay() {
+      allowPlay = true;
+      if (audio.error) { statusLine.textContent = ""; audio.load(); }   // failed before: try again
+      applyPendingSeek();
+      var request = ++playRequest, promise = audio.play();
+      if (promise && typeof promise.then === "function") promise.then(null, function (err) {
+        if (request !== playRequest || (err && err.name === "AbortError")) return;   // superseded
+        if (audio.error) return;   // the error listener retries with the MP3 or explains
+        allowPlay = false;         // refused (autoplay policy, lock screen): back to a working Play
+        showPaused();
+      });
+    }
     function playIndex(i) { selectTrack(i); startPlay(); }
     function next() { playIndex((state.i + 1) % SONGS.length); }
     function prev() { playIndex((state.i - 1 + SONGS.length) % SONGS.length); }

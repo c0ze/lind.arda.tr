@@ -273,6 +273,8 @@ section.stage, section.archive, section.colophon {
 }
 .viewtoggle button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent-deep); }
 .lyrics-hint { text-align: center; color: var(--faint); font-style: italic; font-size: 0.92rem; margin-top: 0.6rem; }
+.player-status { text-align: center; color: var(--ink); font-style: italic; font-size: 0.95rem; margin: 0; }
+.player-status:not(:empty) { margin-top: 1rem; }
 
 /* --- archive ------------------------------------------------------------ */
 .song { margin-bottom: 4.5rem; }

@@ -55,8 +55,10 @@ export async function player(t, opts = {}) {
     volume = 1;
     muted = false;
     playbackRate = 1;
-    src = '';
     error = null;
+    #src = '';
+    get src() { return this.#src; }
+    set src(v) { this.#src = v; this.currentTime = 0; this.error = null; this.readyState = ready ? 4 : 0; }
     readyState = ready ? 4 : 0;
     constructor() { super(); audio.push(this); }
     get seekable() {
@@ -72,7 +74,7 @@ export async function player(t, opts = {}) {
     }
     pause() { this.paused = true; this.dispatchEvent(new w.Event('pause')); }
     emit(type) { this.dispatchEvent(new w.Event(type)); }
-    load() { this.readyState = 4; this.emit('loadedmetadata'); }
+    load() { this.error = null; this.readyState = ready ? 4 : 0; }
     fail(code = 4) { this.error = { code }; this.paused = true; this.emit('error'); }
   };
   let session = null;
