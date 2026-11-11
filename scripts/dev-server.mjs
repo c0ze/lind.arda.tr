@@ -6,13 +6,14 @@
  *   node scripts/dev-server.mjs            # http://127.0.0.1:8777
  *   node scripts/dev-server.mjs 0          # any free port (printed)
  *   PORT=9000 node scripts/dev-server.mjs
+ *   node scripts/dev-server.mjs 0 some/folder   # serve another folder (tests)
  */
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = path.resolve(process.argv[3] ?? path.join(path.dirname(fileURLToPath(import.meta.url)), '..'));
 const PORT = Number(process.argv[2] ?? process.env.PORT ?? 8777);
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
@@ -45,24 +46,24 @@ const server = http.createServer((req, res) => {
     'Accept-Ranges': 'bytes',
     'Cache-Control': 'no-store',
   };
+  // Range is honoured only in its single "bytes=a-b" / "bytes=a-" / "bytes=-n"
+  // forms; anything else (including "bytes=-") is ignored and the whole file
+  // is sent, as HTTP allows. An empty file has no bytes to range over.
+  const m = size > 0 && req.headers.range ? /^bytes=(\d*)-(\d*)$/.exec(req.headers.range.trim()) : null;
   let start = 0, end = size - 1, code = 200;
-  const range = req.headers.range;
-  if (range) {
-    const m = /^bytes=(\d*)-(\d*)$/.exec(range.trim());
-    if (m && (m[1] !== '' || m[2] !== '')) {
-      if (m[1] === '') { start = Math.max(0, size - Number(m[2])); }            // last N bytes
-      else { start = Number(m[1]); if (m[2] !== '') end = Math.min(Number(m[2]), size - 1); }
-    }
-    if (!m || start > end || start >= size) {
+  if (m && (m[1] !== '' || m[2] !== '')) {
+    if (m[1] === '') { start = Math.max(0, size - Number(m[2])); }            // last N bytes
+    else { start = Number(m[1]); if (m[2] !== '') end = Math.min(Number(m[2]), size - 1); }
+    if (start > end || start >= size) {
       res.writeHead(416, { 'Content-Range': `bytes */${size}` });
       return res.end();
     }
     code = 206;
     headers['Content-Range'] = `bytes ${start}-${end}/${size}`;
   }
-  headers['Content-Length'] = end - start + 1;
+  headers['Content-Length'] = size === 0 ? 0 : end - start + 1;
   res.writeHead(code, headers);
-  if (req.method === 'HEAD') return res.end();
+  if (req.method === 'HEAD' || size === 0) return res.end();
   fs.createReadStream(file, { start, end }).on('error', () => res.destroy()).pipe(res);
 });
 
