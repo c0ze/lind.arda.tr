@@ -8,6 +8,20 @@
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function teng(s) { return T[s] || s; }
+  /* index.html loads data/songs.js?v=<hash of data/*.js + lyrics/*.lrc>
+     (scripts/stamp-versions.mjs); the same value busts the .lrc cache. */
+  var DATA_V = (function () {
+    var tag = document.querySelector('script[src*="data/songs.js"]');
+    var m = tag && /[?&]v=([^&#]+)/.exec(tag.getAttribute("src"));
+    return m ? m[1] : "";
+  })();
+  function versioned(url) { return DATA_V ? url + (url.indexOf("?") < 0 ? "?" : "&") + "v=" + DATA_V : url; }
+  function roman(n) {
+    var out = "", table = [[1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"],
+      [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];
+    table.forEach(function (r) { while (n >= r[0]) { out += r[1]; n -= r[0]; } });
+    return out;
+  }
   function readPreference(key) {
     try { return localStorage.getItem(key); } catch (e) { return null; }
   }
@@ -67,7 +81,7 @@
       return Promise.resolve(parseLrc(window.ARDA_LRC[song.id]));
     }
     if (!song.lrc) return Promise.resolve(null);
-    return fetch(song.lrc)
+    return fetch(versioned(song.lrc))
       .then(function (r) { return r.ok ? r.text() : null; })
       .then(function (t) { return t ? parseLrc(t) : null; })
       .catch(function () { return null; });
@@ -86,9 +100,8 @@
   function buildStage() {
     var el = document.getElementById("stage");
     var tracks = SONGS.map(function (s, i) {
-      var roman = ["I", "II", "III", "IV", "V"][i] || (i + 1);
       return '<button class="track" type="button" data-i="' + i + '" aria-current="' + (i === 0) + '">' +
-        '<span class="track__num">' + roman + '</span>' +
+        '<span class="track__num">' + roman(i + 1) + '</span>' +
         '<span><span class="track__rom">' + esc(s.title) + '</span> ' +
         '<span class="track__en">' + esc(s.titleEn) + '</span></span>' +
         '<span class="track__dur" data-dur="' + i + '">' + fmt(s.duration) + '</span></button>';

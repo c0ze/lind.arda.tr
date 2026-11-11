@@ -28,6 +28,15 @@ npm ci
 npm test
 ```
 
+`index.html` loads the CSS, the scripts and (through `app.js`) the `.lrc`
+files with a `?v=` content hash, so browsers never keep a stale copy. After
+editing `assets/`, `data/` or `lyrics/*.lrc`, refresh the hashes (the tests
+fail until you do):
+
+```bash
+node scripts/stamp-versions.mjs
+```
+
 The deployment workflow runs the suite before publishing and includes only
 `index.html`, `CNAME`, `.nojekyll`, `LICENSE`, `assets/`, `audio/`, `data/`, and
 `lyrics/` in the site artifact.
