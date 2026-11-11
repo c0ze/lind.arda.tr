@@ -42,9 +42,10 @@ fail until you do):
 node scripts/stamp-versions.mjs
 ```
 
-The deployment workflow runs the suite before publishing and includes only
-`index.html`, `CNAME`, `LICENSE`, `assets/`, `audio/`, `data/` and
-`lyrics/*.lrc` in the site artifact.
+CI runs the suite on every push and pull request in a read-only `test` job;
+only a push to `main` that passes it runs the `deploy` job, which publishes
+just `index.html`, `CNAME`, `LICENSE`, `assets/`, `audio/`, `data/` and
+`lyrics/*.lrc`.
 
 ## Structure
 
