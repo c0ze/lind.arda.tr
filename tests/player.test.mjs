@@ -1,52 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
-import { JSDOM } from 'jsdom';
-
-const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
-const source = await readFile(new URL('../assets/app.js', import.meta.url), 'utf8');
-const tick = () => new Promise((resolve) => setImmediate(resolve));
-
-async function player(t, { blockedStorage = false } = {}) {
-  const dom = new JSDOM(html, { url: 'https://lind.example/', runScripts: 'outside-only' });
-  t.after(() => dom.window.close());
-  const w = dom.window;
-  if (w.document.readyState === 'loading') {
-    await new Promise((resolve) => w.document.addEventListener('DOMContentLoaded', resolve, { once: true }));
-  }
-  w.document.querySelector('canvas').remove();
-  w.matchMedia = () => ({ matches: true });
-  w.HTMLElement.prototype.scrollIntoView = () => {};
-  const audio = [];
-  w.Audio = class extends w.EventTarget {
-    paused = true;
-    currentTime = 0;
-    duration = 100;
-    canPlayType() { return ''; }
-    constructor() { super(); audio.push(this); }
-    play() { this.paused = false; this.dispatchEvent(new w.Event('play')); return Promise.resolve(); }
-    pause() { this.paused = true; this.dispatchEvent(new w.Event('pause')); }
-  };
-  w.ARDA_SONGS = ['a', 'b'].map((id) => ({
-    id, title: id, titleEn: id, audio: `${id}.mp3`, lrc: `${id}.lrc`, duration: 100,
-    sections: [{ kind: 'verse', lines: [{ sin: 'one', en: 'one' }, { sin: 'two', en: 'two' }] }],
-  }));
-  const requests = [];
-  w.fetch = (url) => new Promise((resolve) => requests.push({ url, resolve }));
-  if (blockedStorage) {
-    w.Storage.prototype.getItem = () => { throw new Error('Storage blocked'); };
-    w.Storage.prototype.setItem = () => { throw new Error('Storage blocked'); };
-  }
-  w.eval(source);
-  return {
-    w, audio: audio[0], requests,
-    query: (selector) => w.document.querySelector(selector),
-    async lyrics(index, text) {
-      requests[index].resolve({ ok: true, text: async () => text });
-      await tick();
-    },
-  };
-}
+import { player } from './harness.mjs';
 
 test('clicking a timed lyric starts playback from that line', async (t) => {
   const p = await player(t);
