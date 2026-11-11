@@ -216,7 +216,7 @@
       scrub.value = Math.round(Math.max(0, d ? Math.min(t, d) : t));
       scrub.setAttribute("aria-valuetext", fmt(t) + " of " + fmt(d));
       var pct = d ? Math.min(100, (t / d) * 100) : 0;
-      scrub.style.backgroundImage = "linear-gradient(to right, var(--accent) " + pct + "%, var(--hair) " + pct + "%)";
+      scrub.style.backgroundImage = "linear-gradient(to right, var(--accent) " + pct + "%, var(--track) " + pct + "%)";
     }
 
     function renderLyrics(song) {
@@ -363,7 +363,7 @@
     function paintVol() {
       var v = audio.volume, silent = audio.muted || v <= 0;
       volSlider.value = Math.round(v * 100);
-      volSlider.style.backgroundImage = "linear-gradient(to right, var(--accent) " + v * 100 + "%, var(--hair) " + v * 100 + "%)";
+      volSlider.style.backgroundImage = "linear-gradient(to right, var(--accent) " + v * 100 + "%, var(--track) " + v * 100 + "%)";
       volBtn.innerHTML = silent ? VOL_OFF : VOL_ON;
       volBtn.setAttribute("aria-label", silent ? "Unmute" : "Mute");
     }

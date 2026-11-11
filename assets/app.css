@@ -18,6 +18,7 @@
   --accent: #d8b46a;  --accent-bright: #e7c97e;  --accent-deep: #b8924a;
   --accent-2: #9db6c4;
   --hair: rgba(216, 180, 106, 0.16);
+  --track: #6d5e3a;   /* slider track: --accent over --bg, 3:1 */
   --glow: rgba(216, 180, 106, 0.45);
 }
 [data-theme="moonlit"] {
@@ -26,14 +27,16 @@
   --accent: #acc6d8;  --accent-bright: #d2e4f0;  --accent-deep: #7d97a8;
   --accent-2: #c2a86a;
   --hair: rgba(172, 198, 216, 0.16);
+  --track: #53616c;
   --glow: rgba(172, 198, 216, 0.5);
 }
 [data-theme="ember"] {
   --bg: #0a0807;  --surface: #0d0a09;  --panel: #161210;
   --ink: #d8cfc6;  --muted: #8a8079;  --faint: #463f3a;
-  --accent: #b4583e;  --accent-bright: #d07a5c;  --accent-deep: #8a3b2e;
+  --accent: #c2664b;  --accent-bright: #d07a5c;  --accent-deep: #8a3b2e;   /* accent: 4.5:1 on --panel */
   --accent-2: #8d96a0;
   --hair: rgba(180, 88, 62, 0.18);
+  --track: #675f5a;   /* warm grey: a red track would sit too close to the red fill */
   --glow: rgba(180, 88, 62, 0.5);
 }
 
@@ -187,7 +190,7 @@ section.stage, section.archive, section.colophon {
   transition: background-color 0.3s, border-color 0.3s, transform 0.3s;
 }
 .track:hover { background: var(--panel); transform: translateY(-2px); }
-.track__num { font-family: var(--font-display); font-size: 0.95rem; color: var(--faint); min-width: 1.7em; }
+.track__num { font-family: var(--font-display); font-size: 0.95rem; color: var(--muted); min-width: 1.7em; }
 .track__rom { font-family: var(--font-display); font-size: 1.1rem; letter-spacing: 0.03em; }
 .track__en { font-style: italic; color: var(--muted); font-size: 0.98rem; }
 .track__dur { margin-left: auto; color: var(--muted); font-size: 0.9rem; letter-spacing: 0.05em; }
@@ -247,7 +250,7 @@ section.stage, section.archive, section.colophon {
 .time { font-size: 0.92rem; letter-spacing: 0.06em; color: var(--muted); min-width: 3.2em; text-align: center; }
 /* a 3px line inside a 24px-tall hit area: the padding is transparent */
 .scrub, .vol__slider { appearance: none; -webkit-appearance: none; height: 24px; padding: 10.5px 0; margin: 0;
-  border-radius: 2px; background-color: var(--hair); background-clip: content-box; cursor: pointer; }
+  border-radius: 2px; background-color: var(--track); background-clip: content-box; cursor: pointer; }
 .scrub { flex: 1; min-width: 80px; }
 .vol { display: flex; align-items: center; gap: 0.5rem; flex: none; }
 .vol__slider { width: 84px; }
@@ -279,7 +282,7 @@ section.stage, section.archive, section.colophon {
   text-transform: uppercase; padding: 0.3rem 0.8rem; border-radius: 999px; transition: color 0.3s, border-color 0.3s;
 }
 .viewtoggle button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent-deep); }
-.lyrics-hint { text-align: center; color: var(--faint); font-style: italic; font-size: 0.92rem; margin-top: 0.6rem; }
+.lyrics-hint { text-align: center; color: var(--muted); font-style: italic; font-size: 0.92rem; margin-top: 0.6rem; }
 .player-status { text-align: center; color: var(--ink); font-style: italic; font-size: 0.95rem; margin: 0; }
 .player-status:not(:empty) { margin-top: 1rem; }
 
@@ -300,7 +303,7 @@ section.stage, section.archive, section.colophon {
 .sect { margin-bottom: 2rem; }
 .sect__label {
   font-size: 0.74rem; letter-spacing: 0.28em; text-transform: uppercase;
-  color: var(--faint); margin-bottom: 0.9rem;
+  color: var(--muted); margin-bottom: 0.9rem;
 }
 .sect--chorus { padding-left: 1.1rem; border-left: 2px solid var(--hair); }
 .a-line { margin-bottom: 1.15rem; }
@@ -316,7 +319,7 @@ section.stage, section.archive, section.colophon {
 .colophon__note { font-style: italic; }
 .footer {
   display: flex; align-items: center; justify-content: center; gap: 0.7rem;
-  padding: 3rem 1.5rem; border-top: 1px solid var(--hair); color: var(--faint);
+  padding: 3rem 1.5rem; border-top: 1px solid var(--hair); color: var(--muted);
   font-size: 0.85rem; letter-spacing: 0.2em; text-transform: uppercase;
 }
 .footer .teng { font-size: 1.2rem; color: var(--accent-deep); }
