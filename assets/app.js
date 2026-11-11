@@ -143,7 +143,7 @@
     var tracks = SONGS.map(function (s, i) {
       return '<button class="track" type="button" data-i="' + i + '" aria-current="' + (i === 0) + '">' +
         '<span class="track__num">' + roman(i + 1) + '</span>' +
-        '<span><span class="track__rom">' + esc(s.title) + '</span> ' +
+        '<span><span class="track__rom" lang="sjn">' + esc(s.title) + '</span> ' +
         '<span class="track__en">' + esc(s.titleEn) + '</span></span>' +
         '<span class="track__dur">' + fmt(s.duration) + '</span></button>';
     }).join("");
@@ -153,8 +153,8 @@
       '<h2>Listen</h2><p class="section-lede">Choose a song. With the sound on, the lyrics light line by line — Tengwar, Sindarin, or English.</p></header>' +
       '<div class="tracklist reveal">' + tracks + '</div>' +
       '<div class="reveal"><div class="np">' +
-        '<div class="np__teng" data-np="teng"></div>' +
-        '<div class="np__rom" data-np="rom"></div>' +
+        '<div class="np__teng" data-np="teng" aria-hidden="true"></div>' +
+        '<div class="np__rom" data-np="rom" lang="sjn"></div>' +
         '<div class="np__en" data-np="en"></div></div>' +
       '<div class="lyrics" data-view="all"><div class="lyrics__scroller"></div></div>' +
       '<p class="lyrics-hint"></p>' +
@@ -217,20 +217,41 @@
       state.lines = flatten(song);
       scroller.innerHTML = state.lines.map(function (l, idx) {
         return '<div class="lyric" data-idx="' + idx + '">' +
-          '<div class="lyric__teng">' + esc(teng(l.sin)) + '</div>' +
-          '<div class="lyric__rom">' + esc(l.sin) + '</div>' +
+          '<div class="lyric__teng" aria-hidden="true">' + esc(teng(l.sin)) + '</div>' +
+          '<div class="lyric__rom" lang="sjn">' + esc(l.sin) + '</div>' +
           '<div class="lyric__en">' + esc(l.en) + '</div></div>';
       }).join("");
       scroller.querySelectorAll(".lyric").forEach(function (node) {
-        node.addEventListener("click", function () {
-          var idx = +node.getAttribute("data-idx");
+        var idx = +node.getAttribute("data-idx");
+        function seekHere() {
           if (state.times && state.times[idx] != null) {
             dropPendingSeek();
             audio.currentTime = state.times[idx];
             startPlay();
           }
+        }
+        node.addEventListener("click", seekHere);
+        node.addEventListener("keydown", function (e) {   // a timed line is a button (see makeLinesOperable)
+          if (!node.hasAttribute("tabindex")) return;
+          if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") { e.preventDefault(); seekHere(); }
+        });
+        node.addEventListener("focus", function () {     // keep the focused line inside the window
+          if (!state.times) return;
+          lyricsBox.scrollTop = 0;   // focus may scroll the overflow:hidden box; the transform does the moving
+          centerOn(node);
         });
       });
+    }
+    function makeLinesOperable() {   // once timings exist, each timed line seeks: by click, Enter or Space
+      scroller.querySelectorAll(".lyric").forEach(function (node) {
+        if (state.times[+node.getAttribute("data-idx")] == null) return;
+        node.setAttribute("role", "button");
+        node.setAttribute("tabindex", "0");
+      });
+    }
+    function centerOn(node) {
+      var y = node ? lyricsBox.clientHeight / 2 - (node.offsetTop + node.offsetHeight / 2) : 0;
+      scroller.style.transform = "translateY(" + y + "px)";
     }
 
     function setActive(idx, force) {
@@ -240,14 +261,10 @@
       for (var k = 0; k < nodes.length; k++) {
         nodes[k].classList.toggle("is-active", k === idx);
         nodes[k].classList.toggle("is-past", k < idx);
+        if (k === idx) nodes[k].setAttribute("aria-current", "true"); else nodes[k].removeAttribute("aria-current");
       }
-      var node = nodes[idx];
-      if (node) {
-        var y = lyricsBox.clientHeight / 2 - (node.offsetTop + node.offsetHeight / 2);
-        scroller.style.transform = "translateY(" + y + "px)";
-      } else {
-        scroller.style.transform = "translateY(0px)";
-      }
+      lyricsBox.scrollTop = 0;
+      centerOn(nodes[idx]);
     }
 
     function selectTrack(i, startAt) {
@@ -284,6 +301,7 @@
         } else {
           state.times = times;
           lyricsBox.classList.add("is-synced"); lyricsBox.classList.remove("is-static");
+          makeLinesOperable();
         }
       });
     }
@@ -558,7 +576,7 @@
       node.className = "song reveal";
       node.innerHTML =
         '<div class="song__head"><div class="song__teng" aria-hidden="true">' + esc(teng(song.title)) + '</div>' +
-        '<h3 class="song__rom">' + esc(song.title) + '</h3>' +
+        '<h3 class="song__rom" lang="sjn">' + esc(song.title) + '</h3>' +
         '<span class="song__en">' + esc(song.titleEn) + '</span>' +
         '<button class="song__listen" type="button" data-play="' + i + '">' + LISTEN + 'listen</button></div>' +
         sections;
