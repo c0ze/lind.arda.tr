@@ -206,3 +206,37 @@ test('corrupt stored preferences fall back to sane values', async (t) => {
     assert.equal(p.query('.btn-loop').getAttribute('aria-pressed'), loop, label);
   }
 });
+
+test('choosing a theme applies it, remembers it and presses only its button', async (t) => {
+  const p = await player(t);
+  p.query('[data-theme-name="ember"]').click();
+  assert.equal(p.w.document.documentElement.getAttribute('data-theme'), 'ember');
+  assert.equal(p.w.localStorage.getItem('arda-theme'), 'ember');
+  assert.deepEqual(p.all('.themeswitch button').map((b) => b.getAttribute('aria-pressed')), ['false', 'false', 'true']);
+});
+
+test('the play gate stops playback the visitor did not ask for', async (t) => {
+  const p = await player(t);
+  p.audio.paused = false;
+  p.audio.emit('play');                 // e.g. Chromium resuming after a src change
+  assert.equal(p.audio.paused, true);
+  assert.equal(p.query('.btn-play').getAttribute('aria-label'), 'Play');
+  p.query('.btn-play').click();
+  assert.equal(p.query('.btn-play').getAttribute('aria-label'), 'Pause');
+  p.query('.track[data-i="1"]').click(); // switching tracks closes the gate again
+  p.audio.paused = false;
+  p.audio.emit('play');
+  assert.equal(p.audio.paused, true);
+});
+
+test('the play button pauses while playing, and Next wraps around', async (t) => {
+  const p = await player(t);
+  p.query('.btn-play').click();
+  p.query('.btn-play').click();
+  assert.equal(p.audio.paused, true);
+  p.query('.btn-next').click();
+  assert.equal(p.current(), 1);
+  assert.equal(p.audio.paused, false);
+  p.query('.btn-next').click();
+  assert.equal(p.current(), 0);
+});
