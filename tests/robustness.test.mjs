@@ -68,3 +68,63 @@ test('a genuinely missing .lrc keeps the original note', async (t) => {
   await tick();
   assert.equal(none.query('.lyrics-hint').textContent, MISSING);
 });
+
+function clipboard(w, writeText) {
+  Object.defineProperty(w.navigator, 'clipboard', { value: writeText && { writeText }, configurable: true });
+}
+
+test('Share copies a link to the current moment and says so', async (t) => {
+  const p = await player(t);
+  let copied = null;
+  clipboard(p.w, async (text) => { copied = text; });
+  p.query('.track[data-i="1"]').click();
+  p.audio.currentTime = 12.34;
+  p.query('.btn-share').click();
+  await tick();
+  assert.equal(copied, 'https://lind.example/#t=12.3&song=b');
+  const status = p.query('.share-status');
+  assert.equal(status.getAttribute('role'), 'status');
+  assert.ok(status.classList.contains('visually-hidden'));
+  assert.equal(status.textContent, 'Link copied');
+  assert.ok(p.query('.btn-share').classList.contains('is-copied'));
+});
+
+test('Share before playing a share link passes the linked moment on', async (t) => {
+  const p = await player(t, { hash: '#t=1:30&song=b' });
+  let copied = null;
+  clipboard(p.w, async (text) => { copied = text; });
+  p.query('.btn-share').click();
+  await tick();
+  assert.equal(copied, 'https://lind.example/#t=90.0&song=b');
+});
+
+test('a refused clipboard falls back to a selection copy', async (t) => {
+  const p = await player(t);
+  clipboard(p.w, () => Promise.reject(new Error('denied')));
+  const commands = [];
+  p.w.document.execCommand = (cmd) => { commands.push(cmd); return true; };
+  p.query('.btn-share').click();
+  await tick(); await tick();
+  assert.deepEqual(commands, ['copy']);
+  assert.equal(p.query('.share-status').textContent, 'Link copied');
+  assert.equal(p.w.document.querySelector('textarea'), null, 'the helper textarea is removed');
+});
+
+test('when no copy works, Share says it could not copy', async (t) => {
+  const p = await player(t);
+  clipboard(p.w, () => Promise.reject(new Error('denied')));
+  p.w.document.execCommand = () => false;
+  p.query('.btn-share').click();
+  await tick(); await tick();
+  assert.equal(p.query('.share-status').textContent, 'Couldn’t copy the link');
+  assert.ok(!p.query('.btn-share').classList.contains('is-copied'));
+});
+
+test('without the async clipboard API the selection copy is used', async (t) => {
+  const p = await player(t);
+  clipboard(p.w, null);
+  p.w.document.execCommand = () => true;
+  p.query('.btn-share').click();
+  await tick(); await tick();
+  assert.equal(p.query('.share-status').textContent, 'Link copied');
+});

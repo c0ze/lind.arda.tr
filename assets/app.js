@@ -167,6 +167,7 @@
         '<span class="time time--dur">0:00</span>' +
         '<button class="btn-loop" type="button" aria-label="Loop album" aria-pressed="false">' + LOOP + '</button>' +
         '<button class="btn-share" type="button" aria-label="Copy link to this moment">' + SHARE + '</button>' +
+        '<span class="share-status visually-hidden" role="status"></span>' +
         '<div class="vol">' +
           '<button class="vol__btn" type="button" aria-label="Mute"></button>' +
           '<input class="vol__slider" type="range" min="0" max="100" value="100" step="1" aria-label="Volume" />' +
@@ -481,32 +482,43 @@
 
     /* --- share: copy a "#t=" link to the current moment -------------------- */
     var shareBtn = el.querySelector(".btn-share");
+    var shareStatus = el.querySelector(".share-status");
     var shareTimer = null;
     function shareUrl() {
+      var t = pendingSeek != null && audio.paused ? pendingSeek : audio.currentTime;   // a link not yet played on
       return location.origin + location.pathname + location.search +
-        "#t=" + Math.max(0, audio.currentTime || 0).toFixed(1) +
+        "#t=" + Math.max(0, t || 0).toFixed(1) +
         "&song=" + encodeURIComponent(SONGS[state.i].id);
     }
+    function copyBySelection(text) {   // older browsers, and a refused clipboard permission
+      var ta = document.createElement("textarea"), ok = false;
+      ta.value = text; ta.setAttribute("readonly", "");
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { ok = !!document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+      return ok;
+    }
     function copyText(text) {
-      if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
-      return new Promise(function (resolve, reject) {
-        var ta = document.createElement("textarea");
-        ta.value = text; ta.setAttribute("readonly", "");
-        ta.style.position = "fixed"; ta.style.opacity = "0";
-        document.body.appendChild(ta); ta.select();
-        try { document.execCommand("copy") ? resolve() : reject(new Error("copy failed")); }
-        catch (e) { reject(e); }
-        document.body.removeChild(ta);
-      });
+      function fallback() { if (!copyBySelection(text)) throw new Error("copy failed"); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try { return navigator.clipboard.writeText(text).then(null, fallback); }
+        catch (e) { return Promise.resolve().then(fallback); }
+      }
+      return Promise.resolve().then(fallback);
     }
     shareBtn.addEventListener("click", function () {
+      shareStatus.textContent = "";   // so the same message is announced again
       copyText(shareUrl()).then(function () {
+        shareStatus.textContent = "Link copied";
         shareBtn.innerHTML = CHECK; shareBtn.classList.add("is-copied");
         clearTimeout(shareTimer);
         shareTimer = setTimeout(function () {
           shareBtn.innerHTML = SHARE; shareBtn.classList.remove("is-copied");
         }, 1500);
-      }).catch(function () {});
+      }, function () {
+        shareStatus.textContent = "Couldn\u2019t copy the link";
+      });
     });
 
     function followShareLink(link) {
