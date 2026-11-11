@@ -113,15 +113,19 @@
     });
     return times.sort(function (a, b) { return a - b; });
   }
+  /* -> times (sorted seconds), MISSING (no timed file for this song) or
+     FAILED (the file exists, or may, but did not load) */
+  var MISSING = "missing", FAILED = "failed";
   function loadLrc(song) {
-    if (window.ARDA_LRC && window.ARDA_LRC[song.id]) {
-      return Promise.resolve(parseLrc(window.ARDA_LRC[song.id]));
-    }
-    if (!song.lrc) return Promise.resolve(null);
+    function timed(text) { var times = parseLrc(text || ""); return times.length ? times : MISSING; }
+    if (window.ARDA_LRC && window.ARDA_LRC[song.id]) return Promise.resolve(timed(window.ARDA_LRC[song.id]));
+    if (!song.lrc) return Promise.resolve(MISSING);
     return fetch(versioned(song.lrc))
-      .then(function (r) { return r.ok ? r.text() : null; })
-      .then(function (t) { return t ? parseLrc(t) : null; })
-      .catch(function () { return null; });
+      .then(function (r) {
+        if (r.ok) return r.text().then(timed);
+        return r.status === 404 || r.status === 410 ? MISSING : FAILED;
+      })
+      .catch(function () { return FAILED; });
   }
 
   /* --- the stage -------------------------------------------------------- */
@@ -272,11 +276,13 @@
       hint.textContent = "";
       loadLrc(song).then(function (times) {
         if (requestSelection !== selection) return;
-        if (times && times.length) {
+        if (times === FAILED) {
+          hint.textContent = "The lyric timings couldn\u2019t be loaded, so the lines won\u2019t follow the song this time.";
+        } else if (times === MISSING) {
+          hint.textContent = "Lyrics sync follows once a timed .lrc is added.";
+        } else {
           state.times = times;
           lyricsBox.classList.add("is-synced"); lyricsBox.classList.remove("is-static");
-        } else {
-          hint.textContent = "Lyrics sync follows once a timed .lrc is added.";
         }
       });
     }
