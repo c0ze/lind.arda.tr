@@ -156,13 +156,19 @@
     /* share-link hash: "#t=SECONDS[&song=ID]" — plain seconds (decimals ok),
        ID as in data/songs.js, e.g. "#t=42.5&song=i-dhae-odog". Autoplay is
        blocked, so the seek waits until the visitor first presses play. */
-    var pendingSeek = null;
+    var pendingSeek = null;          // seconds to start the selected track at, on the next play
+    var cancelDeferredSeek = null;   // set while that seek waits for the media to become seekable
+    function dropPendingSeek() {     // the visitor chose a moment themselves: forget the link's
+      pendingSeek = null;
+      if (cancelDeferredSeek) cancelDeferredSeek();
+    }
+    var linkSeek = null;
     var startIndex = 0;
     location.hash.replace(/^#/, "").split("&").forEach(function (kv) {
       var eq = kv.indexOf("="); if (eq < 0) return;
       var k = kv.slice(0, eq), v = kv.slice(eq + 1);
       try { v = decodeURIComponent(v); } catch (e) {}
-      if (k === "t") { var t = parseFloat(v); if (isFinite(t) && t >= 0) pendingSeek = t; }
+      if (k === "t") { var t = parseFloat(v); if (isFinite(t) && t >= 0) linkSeek = t; }
       if (k === "song") SONGS.forEach(function (s, idx) { if (s.id === v) startIndex = idx; });
     });
 
@@ -178,7 +184,7 @@
         node.addEventListener("click", function () {
           var idx = +node.getAttribute("data-idx");
           if (state.times && state.times[idx] != null) {
-            pendingSeek = null;
+            dropPendingSeek();
             audio.currentTime = state.times[idx];
             startPlay();
           }
@@ -203,8 +209,10 @@
       }
     }
 
-    function selectTrack(i) {
+    function selectTrack(i, startAt) {
       if (i === state.i) return;
+      dropPendingSeek();
+      if (startAt != null) pendingSeek = startAt;
       var requestSelection = ++selection;
       state.i = i; state.active = -1; state.times = null;
       var song = SONGS[i];
@@ -214,7 +222,6 @@
       el.querySelector('[data-np="teng"]').textContent = teng(song.title);
       el.querySelector('[data-np="rom"]').textContent = song.title;
       el.querySelector('[data-np="en"]').textContent = song.titleEn;
-      if (pendingSeek != null && i !== startIndex) pendingSeek = null;   // the seek belongs to the linked track
       allowPlay = false;
       audio.pause();              // src changes don't reliably fire pause (Safari) and can auto-resume (Chromium)
       audio.src = pickAudio(song);
@@ -252,7 +259,8 @@
       }
     });
     scrub.addEventListener("input", function () {
-      var d = audio.duration || 0;
+      var d = audio.duration || SONGS[state.i].duration || 0;
+      dropPendingSeek();
       if (d) audio.currentTime = (scrub.value / 1000) * d;
     });
 
@@ -300,8 +308,8 @@
 
     function applyPendingSeek() {   // deferred "#t=" seek — see the hash comment above
       if (pendingSeek == null) return;
-      var t = pendingSeek, was = state.i;
-      pendingSeek = null;
+      var t = pendingSeek;
+      dropPendingSeek();
       var evs = ["loadedmetadata", "canplay", "progress"];
       function ready() {   // metadata in and the target inside a seekable range
         if (audio.readyState < 1) return false;
@@ -310,13 +318,14 @@
         for (var k = 0; k < s.length; k++) { if (t >= s.start(k) && t <= s.end(k)) return true; }
         return false;
       }
-      function stop() { evs.forEach(function (e) { audio.removeEventListener(e, trySeek); }); }
-      function trySeek() {
-        if (state.i !== was) { stop(); return; }   // switched tracks — the link's moment is gone
-        if (ready()) { stop(); audio.currentTime = t; }
+      function stop() {
+        evs.forEach(function (e) { audio.removeEventListener(e, trySeek); });
+        cancelDeferredSeek = null;
       }
+      function trySeek() { if (ready()) { stop(); audio.currentTime = t; } }
       if (ready()) { audio.currentTime = t; return; }
       evs.forEach(function (e) { audio.addEventListener(e, trySeek); });
+      cancelDeferredSeek = stop;   // selectTrack, a lyric click or the scrubber call it
     }
     function startPlay() { allowPlay = true; applyPendingSeek(); audio.play(); }
     function playIndex(i) { selectTrack(i); startPlay(); }
@@ -384,7 +393,7 @@
       }).catch(function () {});
     });
 
-    selectTrack(startIndex);
+    selectTrack(startIndex, linkSeek);
     window.ardaPlay = function (i) { selectTrack(i); document.getElementById("stage").scrollIntoView(); startPlay(); };
   }
 

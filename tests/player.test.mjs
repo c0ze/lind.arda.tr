@@ -93,3 +93,46 @@ test('with album loop on, the last track wraps to the first', async (t) => {
   assert.equal(p.current(), 0);
   assert.equal(p.audio.paused, false);
 });
+
+test('a lyric click before the media is ready wins over a pending #t= seek', async (t) => {
+  const p = await player(t, { hash: '#t=50&song=a', ready: false });
+  await p.lyrics(0, '[00:10]one\n[00:20]two');
+  p.query('.btn-play').click();          // metadata not in yet: the #t= seek waits
+  p.query('.lyric').click();             // the visitor jumps to line 1
+  assert.equal(p.audio.currentTime, 10);
+  p.audio.readyState = 4;
+  p.audio.emit('progress');
+  p.audio.emit('canplay');
+  assert.equal(p.audio.currentTime, 10);
+});
+
+test('scrubbing before the first play wins over a pending #t= seek', async (t) => {
+  const p = await player(t, { hash: '#t=50&song=a' });
+  const scrub = p.query('.scrub');
+  scrub.value = String(scrub.max * 0.2);  // 20 s of 100
+  scrub.dispatchEvent(new p.w.Event('input'));
+  p.query('.btn-play').click();
+  assert.equal(p.audio.currentTime, 20);
+});
+
+test('scrubbing while a #t= seek waits for metadata cancels it', async (t) => {
+  const p = await player(t, { hash: '#t=50&song=a', ready: false });
+  p.query('.btn-play').click();
+  const scrub = p.query('.scrub');
+  scrub.value = String(scrub.max * 0.2);
+  scrub.dispatchEvent(new p.w.Event('input'));
+  p.audio.readyState = 4;
+  p.audio.emit('loadedmetadata');
+  assert.equal(p.audio.currentTime, 20);
+});
+
+test('choosing another track drops the link moment and its waiting listeners', async (t) => {
+  const p = await player(t, { hash: '#t=50&song=a', ready: false });
+  p.query('.btn-play').click();
+  p.query('.track[data-i="1"]').click();
+  p.audio.readyState = 4;
+  p.audio.emit('loadedmetadata');
+  assert.equal(p.audio.currentTime, 0);
+  p.query('.btn-play').click();
+  assert.equal(p.audio.currentTime, 0);
+});
