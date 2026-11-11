@@ -95,7 +95,8 @@ test('a keyboard-focused line is brought into the window', async (t) => {
 });
 
 function layout(p) {   // line k sits at k*100px, 40px tall, in a 200px window
-  Object.defineProperty(p.query('.lyrics'), 'clientHeight', { value: 200 });
+  const box = p.query('.lyrics');
+  if (!Object.hasOwn(box, 'clientHeight')) Object.defineProperty(box, 'clientHeight', { value: 200 });
   p.all('.lyric').forEach((n, k) => {
     Object.defineProperty(n, 'offsetTop', { value: k * 100 });
     Object.defineProperty(n, 'offsetHeight', { value: 40 });
@@ -205,4 +206,81 @@ test('timed lyric buttons are named by their Sindarin and English text in every 
   // the name is referenced, so hiding text in the Tengwar-only view does not empty it
   p.query('.viewtoggle [data-view="teng"]').click();
   assert.ok(p.query('.lyric').getAttribute('aria-labelledby'));
+});
+
+test('pressing the mouse on a line does not move the lines before the click lands', async (t) => {
+  const p = await player(t, { songs: threeLines() });
+  await p.lyrics(0, '[00:10]one\n[00:20]two\n[00:30]three');
+  layout(p);
+  p.w.document.dispatchEvent(new p.w.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+  p.query('.lyric[data-idx="2"]').focus();           // keyboard hold on line 3
+  playTo(p, 11);                                       // active line 1, scroller held on line 3
+  assert.equal(transform(p), 'translateY(-120px)');
+  const one = p.query('.lyric[data-idx="0"]');
+  one.dispatchEvent(new p.w.MouseEvent('pointerdown', { bubbles: true }));
+  one.dispatchEvent(new p.w.MouseEvent('mousedown', { bubbles: true }));
+  assert.equal(transform(p), 'translateY(-120px)', 'nothing moves under the pointer');
+  one.dispatchEvent(new p.w.MouseEvent('mouseup', { bubbles: true }));
+  one.click();
+  assert.equal(p.audio.currentTime, 10);
+  assert.equal(transform(p), 'translateY(80px)', 'centring resumes after the click');
+});
+
+test('a pointer press that never becomes a click still resumes centring', async (t) => {
+  const p = await player(t, { songs: threeLines() });
+  await p.lyrics(0, '[00:10]one\n[00:20]two\n[00:30]three');
+  layout(p);
+  p.w.document.dispatchEvent(new p.w.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+  p.query('.lyric[data-idx="2"]').focus();
+  playTo(p, 11);
+  p.query('.lyric[data-idx="0"]').dispatchEvent(new p.w.MouseEvent('mousedown', { bubbles: true }));
+  p.w.document.body.dispatchEvent(new p.w.MouseEvent('mouseup', { bubbles: true }));   // dragged off
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal(transform(p), 'translateY(80px)');
+});
+
+test('changing track releases a keyboard hold on the old lyrics', async (t) => {
+  const p = await player(t, { songs: threeLines(), mediaSession: true });
+  await p.lyrics(0, '[00:10]one\n[00:20]two\n[00:30]three');
+  layout(p);
+  p.w.document.dispatchEvent(new p.w.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+  p.query('.lyric[data-idx="1"]').focus();
+  p.session.handlers.nexttrack();                      // the focused line is removed with the old lyrics
+  await p.lyrics(1, '[00:10]one\n[00:20]two');
+  layout(p);
+  playTo(p, 21);
+  assert.equal(transform(p), 'translateY(-20px)', 'the new lyrics follow the song');
+});
+
+test('pressing a key on a line focused by the mouse holds it in view', async (t) => {
+  const p = await player(t, { songs: threeLines() });
+  await p.lyrics(0, '[00:10]one\n[00:20]two\n[00:30]three');
+  layout(p);
+  const three = p.query('.lyric[data-idx="2"]');
+  three.dispatchEvent(new p.w.MouseEvent('mousedown', { bubbles: true }));
+  three.focus();
+  three.click();                                       // seeks to 30
+  playTo(p, 30);
+  assert.equal(transform(p), 'translateY(-120px)', 'line 3 is active and centred');
+  three.dispatchEvent(new p.w.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));   // now on the keyboard
+  playTo(p, 11);
+  assert.equal(transform(p), 'translateY(-120px)', 'the focused line stays put');
+  assert.equal(p.query('.lyric[data-idx="0"]').getAttribute('aria-current'), 'true');
+});
+
+test('Space released on a line only activates it if it was pressed there', async (t) => {
+  const p = await player(t);
+  await p.lyrics(0, '[00:10]one\n[00:20]two');
+  const [one, two] = p.all('.lyric');
+  const key = (node, type, k = ' ') => node.dispatchEvent(new p.w.KeyboardEvent(type, { key: k, bubbles: true, cancelable: true }));
+  key(two, 'keyup');                                   // Space held elsewhere, released here
+  assert.equal(p.audio.currentTime, 0);
+  assert.equal(p.audio.paused, true);
+  key(one, 'keydown');
+  one.dispatchEvent(new p.w.FocusEvent('blur'));       // focus moved away while held
+  key(one, 'keyup');
+  assert.equal(p.audio.currentTime, 0);
+  key(two, 'keydown');
+  key(two, 'keyup');
+  assert.equal(p.audio.currentTime, 20);
 });

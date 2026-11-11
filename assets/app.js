@@ -224,6 +224,7 @@
     }
 
     function renderLyrics(song) {
+      holdScroll = releaseAfterPointer = false;   // the held line goes with the old lyrics (no reliable focusout)
       state.lines = flatten(song);
       scroller.innerHTML = state.lines.map(function (l, idx) {
         return '<div class="lyric" data-idx="' + idx + '">' +
@@ -242,17 +243,21 @@
         }
         node.addEventListener("click", seekHere);
         /* A timed line is a button (see makeLinesOperable) and acts like a
-           native one: Enter on keydown, Space on keyup, key repeats ignored,
-           Space never scrolls the page. */
+           native one: Enter on keydown, Space on keyup (only if it went down on
+           this line), key repeats ignored, Space never scrolls the page. */
         function isSpace(e) { return e.key === " " || e.key === "Spacebar"; }
+        var spaceArmed = false;
         node.addEventListener("keydown", function (e) {
           if (!node.hasAttribute("tabindex")) return;
-          if (isSpace(e)) e.preventDefault();
+          if (isSpace(e)) { e.preventDefault(); spaceArmed = true; }
           else if (e.key === "Enter") { e.preventDefault(); if (!e.repeat) seekHere(); }
         });
         node.addEventListener("keyup", function (e) {
-          if (node.hasAttribute("tabindex") && isSpace(e)) { e.preventDefault(); seekHere(); }
+          if (!node.hasAttribute("tabindex") || !isSpace(e)) return;
+          e.preventDefault();
+          if (spaceArmed) { spaceArmed = false; seekHere(); }
         });
+        node.addEventListener("blur", function () { spaceArmed = false; });
         node.addEventListener("focus", function () {
           if (!state.times || !keyboardInput) return;   // a mouse click seeks; the scroll follows the song
           holdScroll = true;         // keyboard focus: keep this line in the window until focus leaves
@@ -263,17 +268,30 @@
     }
     /* While keyboard focus is on a lyric line the automatic centring pauses
        (the highlight and aria-current still move), so the focused line stays
-       visible; it resumes when focus leaves the lyrics or the mouse is used. */
-    var holdScroll = false, keyboardInput = true;
-    document.addEventListener("keydown", function () { keyboardInput = true; }, true);
+       visible. It resumes when focus leaves the lyrics, after a pointer press
+       on them has done its click (never on the press itself, which would move
+       the line under the pointer), and when the lyrics are re-rendered. */
+    var holdScroll = false, keyboardInput = true, releaseAfterPointer = false;
+    document.addEventListener("keydown", function () {
+      keyboardInput = true;
+      var f = document.activeElement;   // keyboard use begins on a line focused by the pointer
+      if (state.times && f && f !== scroller && scroller.contains(f) && f.hasAttribute("tabindex")) holdScroll = true;
+    }, true);
     ["mousedown", "pointerdown", "touchstart"].forEach(function (type) {
       document.addEventListener(type, function () { keyboardInput = false; }, true);
-      scroller.addEventListener(type, releaseScroll);
+      scroller.addEventListener(type, function () { if (holdScroll) releaseAfterPointer = true; });
+    });
+    scroller.addEventListener("click", function () { if (releaseAfterPointer) releaseScroll(); });
+    ["mouseup", "pointerup", "touchend", "touchcancel"].forEach(function (type) {   // a press dragged off: no click
+      document.addEventListener(type, function () {
+        if (releaseAfterPointer) setTimeout(function () { if (releaseAfterPointer) releaseScroll(); }, 0);
+      });
     });
     scroller.addEventListener("focusout", function (e) {
       if (!e.relatedTarget || !scroller.contains(e.relatedTarget)) releaseScroll();
     });
     function releaseScroll() {
+      releaseAfterPointer = false;
       if (!holdScroll) return;
       holdScroll = false;
       if (state.times) centerOn(scroller.children[state.active]);
