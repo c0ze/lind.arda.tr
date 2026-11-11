@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { player } from './harness.mjs';
+import { player, testSongs } from './harness.mjs';
 
 test('clicking a timed lyric starts playback from that line', async (t) => {
   const p = await player(t);
@@ -135,4 +135,15 @@ test('choosing another track drops the link moment and its waiting listeners', a
   assert.equal(p.audio.currentTime, 0);
   p.query('.btn-play').click();
   assert.equal(p.audio.currentTime, 0);
+});
+
+test('durations come from the data: one audio element, no metadata probes', async (t) => {
+  const songs = testSongs(['a', 'b']);
+  songs[0].duration = 226.12; songs[1].duration = 128.56;
+  const p = await player(t, { songs, ready: false });
+  assert.equal(p.audios.length, 1);
+  assert.deepEqual(p.all('.track__dur').map((n) => n.textContent), ['3:46', '2:08']);
+  assert.equal(p.query('.time--dur').textContent, '3:46');
+  p.query('.track[data-i="1"]').click();
+  assert.equal(p.query('.time--dur').textContent, '2:08');
 });

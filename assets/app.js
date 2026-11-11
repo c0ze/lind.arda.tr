@@ -138,7 +138,7 @@
         '<span class="track__num">' + roman(i + 1) + '</span>' +
         '<span><span class="track__rom">' + esc(s.title) + '</span> ' +
         '<span class="track__en">' + esc(s.titleEn) + '</span></span>' +
-        '<span class="track__dur" data-dur="' + i + '">' + fmt(s.duration) + '</span></button>';
+        '<span class="track__dur">' + fmt(s.duration) + '</span></button>';
     }).join("");
 
     el.innerHTML =
@@ -254,6 +254,7 @@
       el.querySelector('[data-np="teng"]').textContent = teng(song.title);
       el.querySelector('[data-np="rom"]').textContent = song.title;
       el.querySelector('[data-np="en"]').textContent = song.titleEn;
+      durT.textContent = fmt(song.duration);   // data/songs.js matches the files; metadata refines it
       allowPlay = false;
       audio.pause();              // src changes don't reliably fire pause (Safari) and can auto-resume (Chromium)
       audio.src = state.src = pickAudio(song);
@@ -335,11 +336,6 @@
 
     el.querySelectorAll(".track").forEach(function (t) {
       t.addEventListener("click", function () { selectTrack(+t.getAttribute("data-i")); });
-      var i = +t.getAttribute("data-i");
-      var a = new Audio(); a.preload = "metadata"; a.src = pickAudio(SONGS[i]);
-      a.addEventListener("loadedmetadata", function () {
-        el.querySelector('[data-dur="' + i + '"]').textContent = fmt(a.duration);
-      });
     });
 
     el.querySelectorAll(".viewtoggle button").forEach(function (b) {
