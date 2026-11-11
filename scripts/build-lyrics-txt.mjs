@@ -4,8 +4,9 @@
  * One romanized Sindarin line per lyric line, in the exact order of
  * data/songs.js, with a blank line between sections (the sync tool skips empty
  * lines, so the queue still has exactly N lines). This keeps the eventual .lrc
- * aligned line-for-line with the page, which zips timestamps to lines by index:
- *   gwannad-i-lu 23 · i-dhae-odog 20 · i-dann-haer 20
+ * aligned line-for-line with the page, which zips timestamps to lines by index.
+ * It prints each song's line count; tests/data.test.mjs checks the .lrc files
+ * against the same counts.
  *
  * Regenerate after editing lyrics:  node scripts/build-lyrics-txt.mjs
  */

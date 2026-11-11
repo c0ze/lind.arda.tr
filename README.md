@@ -103,7 +103,9 @@ fix in `data/songs.js`, then re-run.
 
 Pushes to `main` deploy automatically: `.github/workflows/deploy-pages.yml`
 publishes the site to GitHub Pages at [lind.arda.tr](https://lind.arda.tr)
-(`CNAME` and `.nojekyll` live in the repo root). The workflow ships the static
+(`CNAME` lives in the repo root). Pages serves the uploaded artifact as-is,
+without Jekyll, so the root `.nojekyll` is not needed and is not published
+(`actions/upload-pages-artifact` leaves dotfiles out). The workflow ships the static
 site only — `docs/` and `scripts/` are excluded from the artifact, and
 `songs/*.wav` and `.tooling/` are git-ignored, so none of it ever ships.
 

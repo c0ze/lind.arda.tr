@@ -1,3 +1,8 @@
+> **Historical document.** This is the design spec from before the site was
+> built (June 2026). The site has moved on since (FLAC + MP3 audio, Media
+> Session, share links, the test suite, accessibility and contrast fixes), so
+> read `README.md` and the code for how it works now.
+
 # Arda — landing page design
 
 **Date:** 2026-06-20
