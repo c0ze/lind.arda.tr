@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
-import { player, tick } from './harness.mjs';
+import { player, testSongs, tick } from './harness.mjs';
 
 const key = (p, node, k) => node.dispatchEvent(new p.w.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
 
@@ -45,8 +45,29 @@ test('Enter or Space on a focused line seeks there and plays', async (t) => {
   assert.equal(p.audio.paused, false);
   const space = new p.w.KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
   one.dispatchEvent(space);
-  assert.equal(p.audio.currentTime, 10);
   assert.equal(space.defaultPrevented, true, 'Space does not scroll the page');
+  assert.equal(p.audio.currentTime, 20, 'Space acts on release, like a native button');
+  one.dispatchEvent(new p.w.KeyboardEvent('keyup', { key: ' ', bubbles: true, cancelable: true }));
+  assert.equal(p.audio.currentTime, 10);
+});
+
+test('holding a key on a lyric line does not seek again on every repeat', async (t) => {
+  const p = await player(t);
+  await p.lyrics(0, '[00:10]one\n[00:20]two');
+  const two = p.query('.lyric[data-idx="1"]');
+  const down = (key, repeat) => {
+    const e = new p.w.KeyboardEvent('keydown', { key, repeat, bubbles: true, cancelable: true });
+    two.dispatchEvent(e);
+    return e;
+  };
+  down('Enter', false);
+  assert.equal(p.audio.currentTime, 20);
+  p.audio.currentTime = 23;                 // playback moves on
+  down('Enter', true);
+  assert.equal(p.audio.currentTime, 23, 'a repeated Enter is ignored');
+  const held = down(' ', true);
+  assert.equal(held.defaultPrevented, true, 'a held Space still does not scroll');
+  assert.equal(p.audio.currentTime, 23);
 });
 
 test('the active line carries aria-current', async (t) => {
@@ -68,8 +89,65 @@ test('a keyboard-focused line is brought into the window', async (t) => {
   Object.defineProperty(box, 'clientHeight', { value: 200 });
   Object.defineProperty(two, 'offsetTop', { value: 400 });
   Object.defineProperty(two, 'offsetHeight', { value: 40 });
+  p.w.document.dispatchEvent(new p.w.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
   two.focus();
   assert.equal(p.query('.lyrics__scroller').style.transform, 'translateY(-320px)');
+});
+
+function layout(p) {   // line k sits at k*100px, 40px tall, in a 200px window
+  Object.defineProperty(p.query('.lyrics'), 'clientHeight', { value: 200 });
+  p.all('.lyric').forEach((n, k) => {
+    Object.defineProperty(n, 'offsetTop', { value: k * 100 });
+    Object.defineProperty(n, 'offsetHeight', { value: 40 });
+  });
+}
+function threeLines() {
+  const songs = testSongs(['a', 'b']);
+  songs[0].sections[0].lines.push({ sin: 'three', en: 'three' });
+  return songs;
+}
+const transform = (p) => p.query('.lyrics__scroller').style.transform;
+function playTo(p, seconds) {
+  p.audio.currentTime = seconds;
+  p.audio.paused = false;
+  p.audio.emit('timeupdate');
+}
+
+test('while keyboard focus is on a lyric line, the lines stop scrolling under it', async (t) => {
+  const p = await player(t, { songs: threeLines() });
+  await p.lyrics(0, '[00:10]one\n[00:20]two\n[00:30]three');
+  layout(p);
+  p.w.document.dispatchEvent(new p.w.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+  p.query('.lyric[data-idx="2"]').focus();
+  assert.equal(transform(p), 'translateY(-120px)');   // centred on the focused line
+  playTo(p, 21);
+  assert.equal(p.query('.lyric[data-idx="1"]').getAttribute('aria-current'), 'true', 'the highlight still moves');
+  assert.ok(p.query('.lyric[data-idx="1"]').classList.contains('is-active'));
+  assert.equal(transform(p), 'translateY(-120px)', 'but focus stays in view');
+  p.query('.btn-play').focus();                        // focus leaves the lyrics
+  assert.equal(transform(p), 'translateY(-20px)', 'centring resumes on the active line');
+  playTo(p, 31);
+  assert.equal(transform(p), 'translateY(-120px)');
+});
+
+test('clicking a lyric line with the mouse does not freeze the scrolling', async (t) => {
+  const p = await player(t, { songs: threeLines() });
+  await p.lyrics(0, '[00:10]one\n[00:20]two\n[00:30]three');
+  layout(p);
+  const one = p.query('.lyric[data-idx="0"]');
+  one.dispatchEvent(new p.w.MouseEvent('mousedown', { bubbles: true }));
+  one.focus();
+  one.click();
+  playTo(p, 21);
+  assert.equal(transform(p), 'translateY(-20px)');
+  // keyboard focus first, then a mouse click on that same line: scrolling resumes
+  p.w.document.dispatchEvent(new p.w.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+  const three = p.query('.lyric[data-idx="2"]');
+  three.focus();
+  three.dispatchEvent(new p.w.MouseEvent('mousedown', { bubbles: true }));
+  three.click();
+  playTo(p, 11);
+  assert.equal(transform(p), 'translateY(80px)');
 });
 
 test('theme buttons keep their text name on narrow screens (clipped, not display:none)', async () => {

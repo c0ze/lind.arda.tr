@@ -241,16 +241,42 @@
           }
         }
         node.addEventListener("click", seekHere);
-        node.addEventListener("keydown", function (e) {   // a timed line is a button (see makeLinesOperable)
+        /* A timed line is a button (see makeLinesOperable) and acts like a
+           native one: Enter on keydown, Space on keyup, key repeats ignored,
+           Space never scrolls the page. */
+        function isSpace(e) { return e.key === " " || e.key === "Spacebar"; }
+        node.addEventListener("keydown", function (e) {
           if (!node.hasAttribute("tabindex")) return;
-          if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") { e.preventDefault(); seekHere(); }
+          if (isSpace(e)) e.preventDefault();
+          else if (e.key === "Enter") { e.preventDefault(); if (!e.repeat) seekHere(); }
         });
-        node.addEventListener("focus", function () {     // keep the focused line inside the window
-          if (!state.times) return;
+        node.addEventListener("keyup", function (e) {
+          if (node.hasAttribute("tabindex") && isSpace(e)) { e.preventDefault(); seekHere(); }
+        });
+        node.addEventListener("focus", function () {
+          if (!state.times || !keyboardInput) return;   // a mouse click seeks; the scroll follows the song
+          holdScroll = true;         // keyboard focus: keep this line in the window until focus leaves
           lyricsBox.scrollTop = 0;   // focus may scroll the overflow:hidden box; the transform does the moving
           centerOn(node);
         });
       });
+    }
+    /* While keyboard focus is on a lyric line the automatic centring pauses
+       (the highlight and aria-current still move), so the focused line stays
+       visible; it resumes when focus leaves the lyrics or the mouse is used. */
+    var holdScroll = false, keyboardInput = true;
+    document.addEventListener("keydown", function () { keyboardInput = true; }, true);
+    ["mousedown", "pointerdown", "touchstart"].forEach(function (type) {
+      document.addEventListener(type, function () { keyboardInput = false; }, true);
+      scroller.addEventListener(type, releaseScroll);
+    });
+    scroller.addEventListener("focusout", function (e) {
+      if (!e.relatedTarget || !scroller.contains(e.relatedTarget)) releaseScroll();
+    });
+    function releaseScroll() {
+      if (!holdScroll) return;
+      holdScroll = false;
+      if (state.times) centerOn(scroller.children[state.active]);
     }
     function makeLinesOperable() {   // once timings exist, each timed line seeks: by click, Enter or Space
       scroller.querySelectorAll(".lyric").forEach(function (node) {
@@ -278,6 +304,7 @@
         nodes[k].classList.toggle("is-past", k < idx);
         if (k === idx) nodes[k].setAttribute("aria-current", "true"); else nodes[k].removeAttribute("aria-current");
       }
+      if (holdScroll) return;
       lyricsBox.scrollTop = 0;
       centerOn(nodes[idx]);
     }
