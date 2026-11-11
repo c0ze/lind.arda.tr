@@ -29,4 +29,5 @@ Pages, or a local server), the stage lights line by line and auto-scrolls. With
 no `.lrc`, the lyrics show statically. Sync is pure progressive enhancement.
 
 > Opening `index.html` straight from disk (`file://`) blocks `fetch`, so sync
-> only activates when served. Use `python3 -m http.server` locally.
+> only activates when served. Use `node scripts/dev-server.mjs` from the
+> project root locally (it supports the Range requests that seeking needs).

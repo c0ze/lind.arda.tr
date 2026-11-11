@@ -13,9 +13,14 @@ Standalone, vanilla HTML/CSS/JS — **no framework and no build step to run.**
 Serve the folder over http (so synced `.lrc` files can load):
 
 ```bash
-python3 -m http.server 8777
-# open http://localhost:8777
+node scripts/dev-server.mjs
+# open http://127.0.0.1:8777  (pass a port, or 0 for any free one)
 ```
+
+Use this server rather than `python3 -m http.server`: it answers HTTP Range
+requests like GitHub Pages does, and without them browsers cannot seek the
+audio, so share links (`#t=`), the scrubber and click-to-seek on lyric lines
+would not work locally.
 
 ## Tests
 
