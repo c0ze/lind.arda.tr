@@ -163,7 +163,7 @@
         '<button class="btn-play" type="button" aria-label="Play">' + PLAY + '</button>' +
         '<button class="btn-next" type="button" aria-label="Next track">' + NEXT + '</button>' +
         '<span class="time time--cur">0:00</span>' +
-        '<input class="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek" />' +
+        '<input class="scrub" type="range" min="0" max="1" value="0" step="1" aria-label="Seek" />' +
         '<span class="time time--dur">0:00</span>' +
         '<button class="btn-loop" type="button" aria-label="Loop album" aria-pressed="false">' + LOOP + '</button>' +
         '<button class="btn-share" type="button" aria-label="Copy link to this moment">' + SHARE + '</button>' +
@@ -205,12 +205,18 @@
       pendingSeek = null;
       if (cancelDeferredSeek) cancelDeferredSeek();
     }
-    function showPosition(t) {   // time readout + scrubber, for playback or a waiting link time
-      var d = audio.duration || SONGS[state.i].duration || 0;
+    function songLength() { return audio.duration || SONGS[state.i].duration || 0; }   // NaN until metadata
+    /* Time readout + scrubber, for playback or a waiting link time. The slider
+       counts whole seconds (arrow keys move 1 s) and says "1:23 of 3:46";
+       the filled part of the track follows the exact time. */
+    function showPosition(t) {
+      var d = songLength();
       curT.textContent = fmt(t);
+      scrub.max = Math.max(1, Math.ceil(d));
+      scrub.value = Math.round(Math.max(0, d ? Math.min(t, d) : t));
+      scrub.setAttribute("aria-valuetext", fmt(t) + " of " + fmt(d));
       var pct = d ? Math.min(100, (t / d) * 100) : 0;
-      scrub.value = pct * 10;
-      scrub.style.background = "linear-gradient(to right, var(--accent) " + pct + "%, var(--hair) " + pct + "%)";
+      scrub.style.backgroundImage = "linear-gradient(to right, var(--accent) " + pct + "%, var(--hair) " + pct + "%)";
     }
 
     function renderLyrics(song) {
@@ -329,7 +335,10 @@
       showPaused();
       statusLine.textContent = "This song couldn\u2019t be loaded. Check your connection, then press play to try again.";
     });
-    audio.addEventListener("loadedmetadata", function () { durT.textContent = fmt(audio.duration); });
+    audio.addEventListener("loadedmetadata", function () {
+      durT.textContent = fmt(audio.duration);
+      showPosition(pendingSeek != null && audio.paused ? pendingSeek : audio.currentTime);
+    });
     audio.addEventListener("timeupdate", function () {   // (a src change resets the media to 0)
       showPosition(pendingSeek != null && audio.paused ? pendingSeek : audio.currentTime);
       if (state.times) {
@@ -339,9 +348,11 @@
       }
     });
     scrub.addEventListener("input", function () {
-      var d = audio.duration || SONGS[state.i].duration || 0;
+      var d = songLength(), t = +scrub.value;
       dropPendingSeek();
-      if (d) audio.currentTime = (scrub.value / 1000) * d;
+      if (d) t = Math.min(t, d);
+      audio.currentTime = t;
+      showPosition(t);
     });
 
     var volSlider = el.querySelector(".vol__slider");
@@ -352,7 +363,7 @@
     function paintVol() {
       var v = audio.volume, silent = audio.muted || v <= 0;
       volSlider.value = Math.round(v * 100);
-      volSlider.style.background = "linear-gradient(to right, var(--accent) " + v * 100 + "%, var(--hair) " + v * 100 + "%)";
+      volSlider.style.backgroundImage = "linear-gradient(to right, var(--accent) " + v * 100 + "%, var(--hair) " + v * 100 + "%)";
       volBtn.innerHTML = silent ? VOL_OFF : VOL_ON;
       volBtn.setAttribute("aria-label", silent ? "Unmute" : "Mute");
     }

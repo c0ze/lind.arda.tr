@@ -78,3 +78,36 @@ test('theme buttons keep their text name on narrow screens (clipped, not display
   assert.doesNotMatch(narrow, /\.themeswitch \.lbl \{[^}]*display:\s*none/);
   assert.match(narrow, /\.themeswitch \.lbl \{[^}]*clip-path: inset\(50%\)/);
 });
+
+test('the seek slider counts seconds and says where it is in words', async (t) => {
+  const songs = (await import('./harness.mjs')).testSongs(['a', 'b']);
+  songs[0].duration = 226.12; songs[1].duration = 128.56;
+  const p = await player(t, { songs, ready: false });
+  const scrub = p.query('.scrub');
+  assert.equal(scrub.max, '227');
+  assert.equal(scrub.step, '1');
+  assert.equal(scrub.getAttribute('aria-valuetext'), '0:00 of 3:46');
+  p.audio.currentTime = 83.4;
+  p.audio.paused = false;
+  p.audio.emit('timeupdate');
+  assert.equal(scrub.value, '83');
+  assert.equal(scrub.getAttribute('aria-valuetext'), '1:23 of 3:46');
+  scrub.value = '100';
+  scrub.dispatchEvent(new p.w.Event('input'));
+  assert.equal(p.audio.currentTime, 100);
+  assert.equal(scrub.getAttribute('aria-valuetext'), '1:40 of 3:46');
+  p.query('.track[data-i="1"]').click();
+  assert.equal(scrub.max, '129');
+  assert.equal(scrub.getAttribute('aria-valuetext'), '0:00 of 2:08');
+  p.audio.readyState = 1;
+  p.audio.duration = 130.2;
+  p.audio.emit('loadedmetadata');
+  assert.equal(scrub.max, '131');
+  assert.equal(scrub.getAttribute('aria-valuetext'), '0:00 of 2:10');
+});
+
+test('a waiting share-link time is what the slider announces', async (t) => {
+  const p = await player(t, { hash: '#t=42' });
+  assert.equal(p.query('.scrub').getAttribute('aria-valuetext'), '0:42 of 1:40');
+  assert.equal(p.query('.scrub').value, '42');
+});
