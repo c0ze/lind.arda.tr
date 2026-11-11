@@ -195,7 +195,11 @@
 
     var state = { i: -1, lines: [], times: null, active: -1 };
     var selection = 0;
-    var allowPlay = false;   // play-gate: only let audio play when we intend to
+    /* The visitor's play intent, which is also the play gate: set only by
+       startPlay; cleared by a track switch, a refused or failed load, and every
+       pause made on the visitor's behalf (pauseByVisitor). A play event while
+       it is false is undone. */
+    var allowPlay = false;
 
     /* share links (see readShareLink): the linked moment waits in pendingSeek */
     var pendingSeek = null;          // seconds to start the selected track at, on the next play
@@ -312,7 +316,11 @@
       });
     }
 
-    playBtn.addEventListener("click", function () { if (audio.paused) startPlay(); else audio.pause(); });
+    function pauseByVisitor() { allowPlay = false; audio.pause(); }
+    function intendedPosition() {   // a seek still waiting, a link time waiting for Play, or where playback is
+      return deferredSeekAt != null ? deferredSeekAt : pendingSeek != null ? pendingSeek : audio.currentTime;
+    }
+    playBtn.addEventListener("click", function () { if (audio.paused) startPlay(); else pauseByVisitor(); });
     audio.addEventListener("play", function () { if (!allowPlay) { audio.pause(); return; } playBtn.innerHTML = PAUSE; playBtn.setAttribute("aria-label", "Pause"); setPlaybackState("playing"); });
     audio.addEventListener("pause", showPaused);
     function showPaused() { playBtn.innerHTML = PLAY; playBtn.setAttribute("aria-label", "Play"); setPlaybackState("paused"); }
@@ -322,17 +330,20 @@
     audio.addEventListener("error", function () {
       var song = SONGS[state.i];
       if (state.src === song.audioFlac && song.audio && song.audio !== song.audioFlac) {
-        var playing = allowPlay;
-        var at = deferredSeekAt != null ? deferredSeekAt : pendingSeek != null ? pendingSeek : audio.currentTime;
+        var playing = allowPlay;     // false after the visitor paused: stay paused on the MP3
+        var at = intendedPosition();
         dropPendingSeek();
         audio.src = state.src = song.audio;
         if (at > 0) pendingSeek = at;
         if (playing) startPlay(); else showPosition(at || 0);
         return;
       }
+      var where = intendedPosition();
+      dropPendingSeek();
       allowPlay = false;
       audio.pause();
       showPaused();
+      if (where > 0) { pendingSeek = where; showPosition(where); }   // Play retries from here
       statusLine.textContent = "This song couldn\u2019t be loaded. Check your connection, then press play to try again.";
     });
     audio.addEventListener("loadedmetadata", function () {
@@ -444,7 +455,13 @@
     var playRequest = 0;
     function startPlay() {
       allowPlay = true;
-      if (audio.error) { statusLine.textContent = ""; audio.load(); }   // failed before: try again
+      if (audio.error) {   // failed before: reload, then seek back to where the visitor was
+        var at = intendedPosition();
+        dropPendingSeek();
+        statusLine.textContent = "";
+        audio.load();
+        if (at > 0) pendingSeek = at;
+      }
       applyPendingSeek();
       var request = ++playRequest, promise = audio.play();
       if (promise && typeof promise.then === "function") promise.then(null, function (err) {
@@ -501,7 +518,7 @@
     }
     if ("mediaSession" in navigator && navigator.mediaSession && typeof navigator.mediaSession.setActionHandler === "function") {
       onAction("play", function () { startPlay(); });
-      onAction("pause", function () { audio.pause(); });
+      onAction("pause", pauseByVisitor);
       onAction("nexttrack", next);
       onAction("previoustrack", prev);
       onAction("seekto", function (d) { if (d && isFinite(d.seekTime)) seekFromOutside(d.seekTime); });

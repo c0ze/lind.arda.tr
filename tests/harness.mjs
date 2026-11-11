@@ -76,7 +76,7 @@ export async function player(t, opts = {}) {
     }
     pause() { this.paused = true; this.dispatchEvent(new w.Event('pause')); }
     emit(type) { this.dispatchEvent(new w.Event(type)); }
-    load() { this.error = null; this.readyState = ready ? 4 : 0; }
+    load() { this.error = null; this.currentTime = 0; this.readyState = ready ? 4 : 0; }
     fail(code = 4) { this.error = { code }; this.paused = true; this.emit('error'); }
   };
   let session = null;

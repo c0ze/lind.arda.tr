@@ -123,3 +123,56 @@ test('pressing Play after a failure retries the load', async (t) => {
   assert.equal(p.audio.paused, false);
   assert.equal(p.query('.player-status').textContent, '');
 });
+
+test('a FLAC failing after the visitor paused falls back to MP3 and stays paused there', async (t) => {
+  const p = await player(t, { flac: 'probably' });
+  p.query('.btn-play').click();
+  p.audio.currentTime = 30;
+  p.query('.btn-play').click();          // the visitor pauses
+  assert.equal(p.audio.paused, true);
+  p.audio.fail();
+  assert.equal(p.audio.src, 'a.mp3');
+  assert.equal(p.audio.paused, true);
+  assert.equal(p.query('.btn-play').getAttribute('aria-label'), 'Play');
+  assert.equal(p.query('.time--cur').textContent, '0:30');
+  p.query('.btn-play').click();
+  assert.equal(p.audio.currentTime, 30);
+  assert.equal(p.audio.paused, false);
+});
+
+test('a pause from the lock screen also counts as the visitor pausing', async (t) => {
+  const p = await player(t, { flac: 'probably', mediaSession: true });
+  p.query('.btn-play').click();
+  p.audio.currentTime = 12;
+  p.session.handlers.pause();
+  p.audio.fail();
+  assert.equal(p.audio.src, 'a.mp3');
+  assert.equal(p.audio.paused, true);
+  p.audio.paused = false;
+  p.audio.emit('play');                  // nothing may resume it behind the visitor's back
+  assert.equal(p.audio.paused, true);
+});
+
+test('pressing Play after a failure resumes from where the visitor was', async (t) => {
+  const p = await player(t, { flac: '' });
+  p.query('.btn-play').click();
+  p.audio.currentTime = 40;
+  p.audio.fail();                        // the MP3 drops mid-song
+  assert.equal(p.query('.time--cur').textContent, '0:40');
+  p.query('.btn-play').click();          // reload resets the media to 0
+  assert.equal(p.audio.currentTime, 40);
+  assert.equal(p.audio.paused, false);
+});
+
+test('a link time survives the FLAC and then the MP3 failing, and the retry seeks to it', async (t) => {
+  const p = await player(t, { flac: 'probably', hash: '#t=42', ready: false });
+  p.query('.btn-play').click();          // waits for metadata
+  p.audio.fail();                        // FLAC -> MP3, still waiting
+  p.audio.fail();                        // MP3 fails too
+  assert.match(p.query('.player-status').textContent, /couldn.t be loaded/);
+  assert.equal(p.query('.time--cur').textContent, '0:42');
+  p.query('.btn-play').click();          // retry: load() again
+  p.audio.readyState = 4;
+  p.audio.emit('loadedmetadata');
+  assert.equal(p.audio.currentTime, 42);
+});
