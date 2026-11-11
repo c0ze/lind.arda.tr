@@ -326,7 +326,10 @@ section.stage, section.archive, section.colophon {
   .controls { gap: 0.8rem; }
   .btn-play { width: 46px; height: 46px; }
   .time { min-width: 2.6em; font-size: 0.85rem; }
-  .themeswitch .lbl { display: none; }
+  .themeswitch .lbl {   /* only the dot shows; the name stays for screen readers */
+    position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden;
+    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+  }
   .themeswitch button { padding: 0.4rem; }
   body { font-size: 18px; }
   section.stage, section.archive, section.colophon { padding: 4rem 1.3rem; }

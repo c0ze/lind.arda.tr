@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { player, tick } from './harness.mjs';
 
@@ -69,4 +70,11 @@ test('a keyboard-focused line is brought into the window', async (t) => {
   Object.defineProperty(two, 'offsetHeight', { value: 40 });
   two.focus();
   assert.equal(p.query('.lyrics__scroller').style.transform, 'translateY(-320px)');
+});
+
+test('theme buttons keep their text name on narrow screens (clipped, not display:none)', async () => {
+  const css = await readFile(new URL('../assets/app.css', import.meta.url), 'utf8');
+  const narrow = /@media \(max-width: 760px\) \{([\s\S]*?)\n\}/.exec(css)[1];
+  assert.doesNotMatch(narrow, /\.themeswitch \.lbl \{[^}]*display:\s*none/);
+  assert.match(narrow, /\.themeswitch \.lbl \{[^}]*clip-path: inset\(50%\)/);
 });
