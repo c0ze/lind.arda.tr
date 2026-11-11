@@ -562,16 +562,21 @@
   }
 
   /* --- hero motes ------------------------------------------------------- */
+  /* Runs only while the hero is on screen in a visible tab. The colour is read
+     once per theme, and a resize re-scatters the motes only when the width
+     changes (mobile URL bars resize the height while scrolling). */
   function initMotes() {
     var c = document.querySelector(".hero__motes");
-    if (!c) return;
-    var ctx = c.getContext("2d"), motes = [], W, H;
+    var ctx = c && c.getContext && c.getContext("2d");
+    if (!ctx) return;
+    var hero = c.parentElement, motes = [], W = 0, H = 0, col = "", frame = 0;
+    var inView = !("IntersectionObserver" in window);
     function size() {
-      var r = c.parentElement.getBoundingClientRect();
-      W = c.width = r.width; H = c.height = r.height;
+      var r = hero.getBoundingClientRect();
+      W = c.width = Math.round(r.width); H = c.height = Math.round(r.height);
     }
     function ink() {
-      return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#d8b46a";
+      col = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#d8b46a";
     }
     function make() {
       motes = [];
@@ -581,9 +586,15 @@
         a: Math.random() * 0.5 + 0.1, vy: -(Math.random() * 0.18 + 0.03), tw: Math.random() * Math.PI * 2
       });
     }
-    function draw() {
+    function paintStill() {
       ctx.clearRect(0, 0, W, H);
-      var col = ink();
+      ctx.fillStyle = col;
+      motes.forEach(function (m) { ctx.globalAlpha = m.a; ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2); ctx.fill(); });
+      ctx.globalAlpha = 1;
+    }
+    function draw() {
+      frame = 0;
+      ctx.clearRect(0, 0, W, H);
       motes.forEach(function (m) {
         m.y += m.vy; m.tw += 0.02;
         if (m.y < -4) { m.y = H + 4; m.x = Math.random() * W; }
@@ -592,15 +603,32 @@
         ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2); ctx.fill();
       });
       ctx.globalAlpha = 1;
-      requestAnimationFrame(draw);
+      schedule();
     }
-    size(); make();
-    window.addEventListener("resize", function () { size(); make(); });
-    if (reduce) {
-      var col = ink(); ctx.fillStyle = col;
-      motes.forEach(function (m) { ctx.globalAlpha = m.a; ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2); ctx.fill(); });
-      ctx.globalAlpha = 1;
-    } else { draw(); }
+    function schedule() {
+      if (!reduce && inView && !document.hidden) { if (!frame) frame = requestAnimationFrame(draw); }
+      else if (frame) { cancelAnimationFrame(frame); frame = 0; }
+    }
+    size(); make(); ink();
+    window.addEventListener("resize", function () {
+      var was = W;
+      size();                       // resizing the canvas clears it
+      if (W !== was) make();
+      if (reduce) paintStill();
+    });
+    if ("MutationObserver" in window) {
+      new MutationObserver(function () { ink(); if (reduce) paintStill(); })
+        .observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    }
+    if (reduce) { paintStill(); return; }
+    if (!inView) {
+      new IntersectionObserver(function (entries) {
+        inView = entries[entries.length - 1].isIntersecting;
+        schedule();
+      }).observe(hero);
+    }
+    document.addEventListener("visibilitychange", schedule);
+    schedule();
   }
 
   /* --- boot ------------------------------------------------------------- */
