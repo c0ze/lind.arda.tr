@@ -319,20 +319,45 @@
     var volSlider = el.querySelector(".vol__slider");
     var volBtn = el.querySelector(".vol__btn");
     var lastVol = 1;
-    function applyVol(v, save) {
+    /* The button mutes (audio.muted); the slider sets the level (audio.volume).
+       iOS/iPadOS ignore volume, so muting through it would do nothing there. */
+    function paintVol() {
+      var v = audio.volume, silent = audio.muted || v <= 0;
+      volSlider.value = Math.round(v * 100);
+      volSlider.style.background = "linear-gradient(to right, var(--accent) " + v * 100 + "%, var(--hair) " + v * 100 + "%)";
+      volBtn.innerHTML = silent ? VOL_OFF : VOL_ON;
+      volBtn.setAttribute("aria-label", silent ? "Unmute" : "Mute");
+    }
+    function setVolume(v, save) {
       v = Math.min(1, Math.max(0, v));
       audio.volume = v;
       if (v > 0) lastVol = v;
-      volSlider.value = Math.round(v * 100);
-      volSlider.style.background = "linear-gradient(to right, var(--accent) " + v * 100 + "%, var(--hair) " + v * 100 + "%)";
-      volBtn.innerHTML = v <= 0 ? VOL_OFF : VOL_ON;
-      volBtn.setAttribute("aria-label", v <= 0 ? "Unmute" : "Mute");
       if (save) writePreference("arda-volume", String(v));
     }
+    function setMuted(m, save) {
+      audio.muted = m;
+      if (save) writePreference("arda-muted", m ? "1" : "0");
+    }
     var savedVol = parseFloat(readPreference("arda-volume"));
-    applyVol(isNaN(savedVol) ? 1 : savedVol, false);
-    volSlider.addEventListener("input", function () { applyVol(volSlider.value / 100, true); });
-    volBtn.addEventListener("click", function () { applyVol(audio.volume > 0 ? 0 : lastVol || 1, true); });
+    setVolume(isNaN(savedVol) ? 1 : savedVol, false);
+    setMuted(readPreference("arda-muted") === "1", false);
+    paintVol();
+    volSlider.addEventListener("input", function () {
+      var v = volSlider.value / 100;
+      setVolume(v, true);
+      if (v > 0 && audio.muted) setMuted(false, true);
+      paintVol();
+    });
+    volBtn.addEventListener("click", function () {
+      if (audio.muted || audio.volume <= 0) {
+        setMuted(false, true);
+        if (audio.volume <= 0) setVolume(lastVol || 1, true);   // a level of 0 (the old mute) gets sound back
+      } else {
+        setMuted(true, true);
+      }
+      paintVol();
+    });
+    audio.addEventListener("volumechange", paintVol);
 
     el.querySelectorAll(".track").forEach(function (t) {
       t.addEventListener("click", function () { selectTrack(+t.getAttribute("data-i")); });

@@ -51,7 +51,7 @@ test('blocked storage does not stop the player or its preference controls', asyn
   p.query('.btn-loop').click();
   assert.equal(p.query('.btn-loop').getAttribute('aria-pressed'), 'false');
   p.query('.vol__btn').click();
-  assert.equal(p.audio.volume, 0);
+  assert.equal(p.audio.muted, true);
   p.query('.btn-play').click();
   assert.equal(p.audio.paused, false);
 });
@@ -146,4 +146,63 @@ test('durations come from the data: one audio element, no metadata probes', asyn
   assert.equal(p.query('.time--dur').textContent, '3:46');
   p.query('.track[data-i="1"]').click();
   assert.equal(p.query('.time--dur').textContent, '2:08');
+});
+
+test('the mute button toggles muted (iOS ignores volume) and keeps the volume', async (t) => {
+  const p = await player(t, { storage: { 'arda-volume': '0.6' } });
+  const btn = p.query('.vol__btn');
+  assert.equal(p.audio.volume, 0.6);
+  btn.click();
+  assert.equal(p.audio.muted, true);
+  assert.equal(p.audio.volume, 0.6);
+  assert.equal(btn.getAttribute('aria-label'), 'Unmute');
+  assert.equal(p.w.localStorage.getItem('arda-muted'), '1');
+  btn.click();
+  assert.equal(p.audio.muted, false);
+  assert.equal(btn.getAttribute('aria-label'), 'Mute');
+  assert.equal(p.w.localStorage.getItem('arda-muted'), '0');
+});
+
+test('a stored mute comes back on the next visit', async (t) => {
+  const p = await player(t, { storage: { 'arda-muted': '1', 'arda-volume': '0.4' } });
+  assert.equal(p.audio.muted, true);
+  assert.equal(p.audio.volume, 0.4);
+  assert.equal(p.query('.vol__btn').getAttribute('aria-label'), 'Unmute');
+});
+
+test('moving the volume slider unmutes', async (t) => {
+  const p = await player(t, { storage: { 'arda-muted': '1' } });
+  const slider = p.query('.vol__slider');
+  slider.value = '30';
+  slider.dispatchEvent(new p.w.Event('input'));
+  assert.equal(p.audio.muted, false);
+  assert.equal(p.audio.volume, 0.3);
+  assert.equal(p.w.localStorage.getItem('arda-volume'), '0.3');
+});
+
+test('a volume stored as 0 by the old mute reads as muted, and unmuting restores sound', async (t) => {
+  const p = await player(t, { storage: { 'arda-volume': '0' } });
+  const btn = p.query('.vol__btn');
+  assert.equal(btn.getAttribute('aria-label'), 'Unmute');
+  btn.click();
+  assert.equal(p.audio.muted, false);
+  assert.equal(p.audio.volume, 1);
+});
+
+test('corrupt stored preferences fall back to sane values', async (t) => {
+  const cases = [
+    [{ 'arda-volume': 'loud' }, 1, false, 'true'],
+    [{ 'arda-volume': '-3' }, 0, false, 'true'],
+    [{ 'arda-volume': '7' }, 1, false, 'true'],
+    [{ 'arda-muted': 'yes' }, 1, false, 'true'],
+    [{ 'arda-loop': 'false' }, 1, false, 'true'],
+    [{ 'arda-loop': '0' }, 1, false, 'false'],
+  ];
+  for (const [storage, volume, muted, loop] of cases) {
+    const p = await player(t, { storage });
+    const label = JSON.stringify(storage);
+    assert.equal(p.audio.volume, volume, label);
+    assert.equal(p.audio.muted, muted, label);
+    assert.equal(p.query('.btn-loop').getAttribute('aria-pressed'), loop, label);
+  }
 });
