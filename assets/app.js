@@ -42,6 +42,40 @@
     return out;
   }
 
+  /* --- share links ------------------------------------------------------ */
+  /* "#t=TIME[&song=ID]" (either part alone works). TIME is seconds ("42",
+     "42.5"), "M:SS", "H:MM:SS" or "1m30s" / "1h2m3s"; ID as in data/songs.js,
+     e.g. "#t=1:30&song=i-dhae-odog". Autoplay is blocked, so the seek waits
+     until the visitor presses play. */
+  function parseTime(v) {
+    var m;
+    if (/^\d+(?:\.\d+)?$/.test(v)) return parseFloat(v);
+    if ((m = /^(?:(\d+):)?(\d+):(\d+(?:\.\d+)?)$/.exec(v))) {
+      return (m[1] ? +m[1] * 3600 : 0) + +m[2] * 60 + parseFloat(m[3]);
+    }
+    if (v && (m = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+(?:\.\d+)?)s)?$/.exec(v))) {
+      return (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (parseFloat(m[3]) || 0);
+    }
+    return null;
+  }
+  function readShareLink() {   // -> { i: track index, t: seconds or null } or null
+    var t = null, id = null, i = 0;
+    location.hash.replace(/^#/, "").split("&").forEach(function (kv) {
+      var eq = kv.indexOf("="); if (eq < 0) return;
+      var k = kv.slice(0, eq), v = kv.slice(eq + 1);
+      try { v = decodeURIComponent(v); } catch (e) {}
+      if (k === "t") t = parseTime(v);
+      if (k === "song") id = v;
+    });
+    if (id != null) {
+      i = -1;
+      SONGS.forEach(function (s, idx) { if (s.id === id) i = idx; });
+      if (i < 0) return null;   // unknown song: its time means nothing for the others
+    }
+    if (t != null && SONGS[i].duration && t >= SONGS[i].duration) t = null;   // past the end
+    return t == null && id == null ? null : { i: i, t: t };
+  }
+
   /* --- Tengwar for all static [data-teng] chrome ------------------------ */
   function paintStaticTengwar(root) {
     (root || document).querySelectorAll("[data-teng]").forEach(function (el) {
@@ -153,24 +187,20 @@
     var selection = 0;
     var allowPlay = false;   // play-gate: only let audio play when we intend to
 
-    /* share-link hash: "#t=SECONDS[&song=ID]" — plain seconds (decimals ok),
-       ID as in data/songs.js, e.g. "#t=42.5&song=i-dhae-odog". Autoplay is
-       blocked, so the seek waits until the visitor first presses play. */
+    /* share links (see readShareLink): the linked moment waits in pendingSeek */
     var pendingSeek = null;          // seconds to start the selected track at, on the next play
     var cancelDeferredSeek = null;   // set while that seek waits for the media to become seekable
     function dropPendingSeek() {     // the visitor chose a moment themselves: forget the link's
       pendingSeek = null;
       if (cancelDeferredSeek) cancelDeferredSeek();
     }
-    var linkSeek = null;
-    var startIndex = 0;
-    location.hash.replace(/^#/, "").split("&").forEach(function (kv) {
-      var eq = kv.indexOf("="); if (eq < 0) return;
-      var k = kv.slice(0, eq), v = kv.slice(eq + 1);
-      try { v = decodeURIComponent(v); } catch (e) {}
-      if (k === "t") { var t = parseFloat(v); if (isFinite(t) && t >= 0) linkSeek = t; }
-      if (k === "song") SONGS.forEach(function (s, idx) { if (s.id === v) startIndex = idx; });
-    });
+    function showPosition(t) {   // time readout + scrubber, for playback or a waiting link time
+      var d = audio.duration || SONGS[state.i].duration || 0;
+      curT.textContent = fmt(t);
+      var pct = d ? Math.min(100, (t / d) * 100) : 0;
+      scrub.value = pct * 10;
+      scrub.style.background = "linear-gradient(to right, var(--accent) " + pct + "%, var(--hair) " + pct + "%)";
+    }
 
     function renderLyrics(song) {
       state.lines = flatten(song);
@@ -212,7 +242,6 @@
     function selectTrack(i, startAt) {
       if (i === state.i) return;
       dropPendingSeek();
-      if (startAt != null) pendingSeek = startAt;
       var requestSelection = ++selection;
       state.i = i; state.active = -1; state.times = null;
       var song = SONGS[i];
@@ -227,6 +256,8 @@
       audio.src = pickAudio(song);
       playBtn.innerHTML = PLAY; playBtn.setAttribute("aria-label", "Play"); setPlaybackState("paused");
       updateMediaSession(song);
+      if (startAt != null) pendingSeek = startAt;
+      showPosition(pendingSeek || 0);
       renderLyrics(song);
       scroller.style.transform = "translateY(0)";
       lyricsBox.classList.remove("is-synced"); lyricsBox.classList.add("is-static");
@@ -246,12 +277,8 @@
     audio.addEventListener("play", function () { if (!allowPlay) { audio.pause(); return; } playBtn.innerHTML = PAUSE; playBtn.setAttribute("aria-label", "Pause"); setPlaybackState("playing"); });
     audio.addEventListener("pause", function () { playBtn.innerHTML = PLAY; playBtn.setAttribute("aria-label", "Play"); setPlaybackState("paused"); });
     audio.addEventListener("loadedmetadata", function () { durT.textContent = fmt(audio.duration); });
-    audio.addEventListener("timeupdate", function () {
-      var d = audio.duration || SONGS[state.i].duration || 0;
-      curT.textContent = fmt(audio.currentTime);
-      var pct = d ? (audio.currentTime / d) * 100 : 0;
-      scrub.value = pct * 10;
-      scrub.style.background = "linear-gradient(to right, var(--accent) " + pct + "%, var(--hair) " + pct + "%)";
+    audio.addEventListener("timeupdate", function () {   // (a src change resets the media to 0)
+      showPosition(pendingSeek != null && audio.paused ? pendingSeek : audio.currentTime);
       if (state.times) {
         var a = -1;
         for (var k = 0; k < state.times.length; k++) { if (state.times[k] <= audio.currentTime) a = k; else break; }
@@ -311,9 +338,11 @@
       var t = pendingSeek;
       dropPendingSeek();
       var evs = ["loadedmetadata", "canplay", "progress"];
-      function ready() {   // metadata in and the target inside a seekable range
+      function pastEnd() { return isFinite(audio.duration) && t >= audio.duration; }
+      function seek() { if (!pastEnd()) audio.currentTime = t; }   // a time past the end would end the track
+      function ready() {   // metadata in and the target inside a seekable range (or out of reach)
         if (audio.readyState < 1) return false;
-        if (isFinite(audio.duration)) t = Math.min(t, audio.duration);
+        if (pastEnd()) return true;
         var s = audio.seekable;
         for (var k = 0; k < s.length; k++) { if (t >= s.start(k) && t <= s.end(k)) return true; }
         return false;
@@ -322,8 +351,8 @@
         evs.forEach(function (e) { audio.removeEventListener(e, trySeek); });
         cancelDeferredSeek = null;
       }
-      function trySeek() { if (ready()) { stop(); audio.currentTime = t; } }
-      if (ready()) { audio.currentTime = t; return; }
+      function trySeek() { if (ready()) { stop(); seek(); } }
+      if (ready()) { seek(); return; }
       evs.forEach(function (e) { audio.addEventListener(e, trySeek); });
       cancelDeferredSeek = stop;   // selectTrack, a lyric click or the scrubber call it
     }
@@ -393,7 +422,22 @@
       }).catch(function () {});
     });
 
-    selectTrack(startIndex, linkSeek);
+    function followShareLink(link) {
+      if (link.i !== state.i) selectTrack(link.i, link.t);
+      else if (link.t != null) {
+        dropPendingSeek();
+        pendingSeek = link.t;
+        if (allowPlay && !audio.paused) applyPendingSeek(); else showPosition(link.t);
+      }
+      el.scrollIntoView();
+    }
+    var link = readShareLink();
+    selectTrack(link ? link.i : 0, link && link.t);
+    if (link) followShareLink(link);
+    window.addEventListener("hashchange", function () {
+      var next = readShareLink();
+      if (next) followShareLink(next);
+    });
     window.ardaPlay = function (i) { selectTrack(i); document.getElementById("stage").scrollIntoView(); startPlay(); };
   }
 
