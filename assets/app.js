@@ -228,8 +228,8 @@
       scroller.innerHTML = state.lines.map(function (l, idx) {
         return '<div class="lyric" data-idx="' + idx + '">' +
           '<div class="lyric__teng" aria-hidden="true">' + esc(teng(l.sin)) + '</div>' +
-          '<div class="lyric__rom" lang="sjn">' + esc(l.sin) + '</div>' +
-          '<div class="lyric__en">' + esc(l.en) + '</div></div>';
+          '<div class="lyric__rom" id="lyric-' + idx + '-rom" lang="sjn">' + esc(l.sin) + '</div>' +
+          '<div class="lyric__en" id="lyric-' + idx + '-en" lang="en">' + esc(l.en) + '</div></div>';
       }).join("");
       scroller.querySelectorAll(".lyric").forEach(function (node) {
         var idx = +node.getAttribute("data-idx");
@@ -255,8 +255,13 @@
     function makeLinesOperable() {   // once timings exist, each timed line seeks: by click, Enter or Space
       scroller.querySelectorAll(".lyric").forEach(function (node) {
         if (state.times[+node.getAttribute("data-idx")] == null) return;
+        var idx = node.getAttribute("data-idx");
         node.setAttribute("role", "button");
         node.setAttribute("tabindex", "0");
+        /* Named by reference, so the name survives the view toggle hiding the
+           romanized or English text (the Tengwar is aria-hidden), and each part
+           keeps its own lang. */
+        node.setAttribute("aria-labelledby", "lyric-" + idx + "-rom" + (node.querySelector(".lyric__en").textContent ? " lyric-" + idx + "-en" : ""));
       });
     }
     function centerOn(node) {

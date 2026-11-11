@@ -111,3 +111,20 @@ test('a waiting share-link time is what the slider announces', async (t) => {
   assert.equal(p.query('.scrub').getAttribute('aria-valuetext'), '0:42 of 1:40');
   assert.equal(p.query('.scrub').value, '42');
 });
+
+test('timed lyric buttons are named by their Sindarin and English text in every view', async (t) => {
+  const p = await player(t);
+  await p.lyrics(0, '[00:10]one\n[00:20]two');
+  for (const line of p.all('.lyric')) {
+    const ids = (line.getAttribute('aria-labelledby') || '').split(' ').filter(Boolean);
+    assert.equal(ids.length, 2, 'Sindarin, then English');
+    const [rom, en] = ids.map((id) => p.w.document.getElementById(id));
+    assert.equal(rom, line.querySelector('.lyric__rom'));
+    assert.equal(rom.getAttribute('lang'), 'sjn');
+    assert.equal(en, line.querySelector('.lyric__en'));
+    assert.equal(en.getAttribute('lang'), 'en');
+  }
+  // the name is referenced, so hiding text in the Tengwar-only view does not empty it
+  p.query('.viewtoggle [data-view="teng"]').click();
+  assert.ok(p.query('.lyric').getAttribute('aria-labelledby'));
+});
