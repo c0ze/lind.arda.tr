@@ -412,17 +412,37 @@
       if (!("mediaSession" in navigator) || typeof window.MediaMetadata !== "function") return;
       try {   // no cover image ships with the site, so no artwork entry
         navigator.mediaSession.metadata = new window.MediaMetadata({
-          title: song.title + " — " + song.titleEn, artist: "Arda"
+          title: song.title + " — " + song.titleEn, artist: "Arda", album: "Arda"
         });
       } catch (e) {}
     }
-    if ("mediaSession" in navigator) {
+    function updatePositionState() {
+      var ms = navigator.mediaSession, d = audio.duration;
+      if (!ms || typeof ms.setPositionState !== "function" || !isFinite(d) || d <= 0) return;
       try {
-        navigator.mediaSession.setActionHandler("play", function () { startPlay(); });
-        navigator.mediaSession.setActionHandler("pause", function () { audio.pause(); });
-        navigator.mediaSession.setActionHandler("nexttrack", next);
-        navigator.mediaSession.setActionHandler("previoustrack", prev);
+        ms.setPositionState({ duration: d, playbackRate: audio.playbackRate || 1, position: Math.min(Math.max(0, audio.currentTime), d) });
       } catch (e) {}
+    }
+    ["loadedmetadata", "durationchange", "play", "pause", "seeked", "ratechange"].forEach(function (e) {
+      audio.addEventListener(e, updatePositionState);
+    });
+    function seekFromOutside(t) {   // lock screen, headset, OS media controls
+      var d = audio.duration || SONGS[state.i].duration || 0;
+      dropPendingSeek();
+      audio.currentTime = Math.max(0, d ? Math.min(t, d) : t);
+      updatePositionState();
+    }
+    function onAction(action, fn) {   // browsers reject actions they don't know, one at a time
+      try { navigator.mediaSession.setActionHandler(action, fn); } catch (e) {}
+    }
+    if ("mediaSession" in navigator && navigator.mediaSession && typeof navigator.mediaSession.setActionHandler === "function") {
+      onAction("play", function () { startPlay(); });
+      onAction("pause", function () { audio.pause(); });
+      onAction("nexttrack", next);
+      onAction("previoustrack", prev);
+      onAction("seekto", function (d) { if (d && isFinite(d.seekTime)) seekFromOutside(d.seekTime); });
+      onAction("seekbackward", function (d) { seekFromOutside(audio.currentTime - ((d && d.seekOffset) || 10)); });
+      onAction("seekforward", function (d) { seekFromOutside(audio.currentTime + ((d && d.seekOffset) || 10)); });
     }
 
     /* --- share: copy a "#t=" link to the current moment -------------------- */
