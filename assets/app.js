@@ -329,7 +329,10 @@
       writePreference("arda-loop", loopMode ? "1" : "0");
       loopBtn.setAttribute("aria-pressed", String(loopMode));
     });
-    audio.addEventListener("ended", function () { if (loopMode) next(); });
+    audio.addEventListener("ended", function () {   // play the album through; wrap only when looping
+      if (state.i < SONGS.length - 1) playIndex(state.i + 1);
+      else if (loopMode) playIndex(0);
+    });
 
     function setPlaybackState(s) {
       if ("mediaSession" in navigator) { try { navigator.mediaSession.playbackState = s; } catch (e) {} }

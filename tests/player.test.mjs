@@ -70,3 +70,26 @@ test('changing lyric view recenters the active line with its new height', async 
   p.query('.viewtoggle [data-view="en"]').click();
   assert.equal(p.query('.lyrics__scroller').style.transform, 'translateY(30px)');
 });
+
+test('with album loop off, a finished track still advances, and the last one stops', async (t) => {
+  const p = await player(t, { storage: { 'arda-loop': '0' } });
+  p.query('.btn-play').click();
+  p.audio.paused = true;
+  p.audio.emit('ended');
+  assert.equal(p.current(), 1);
+  assert.equal(p.audio.paused, false);
+  p.audio.paused = true;
+  p.audio.emit('ended');
+  assert.equal(p.current(), 1);
+  assert.equal(p.audio.paused, true);
+});
+
+test('with album loop on, the last track wraps to the first', async (t) => {
+  const p = await player(t, { storage: { 'arda-loop': '1' } });
+  p.query('.track[data-i="1"]').click();
+  p.query('.btn-play').click();
+  p.audio.paused = true;
+  p.audio.emit('ended');
+  assert.equal(p.current(), 0);
+  assert.equal(p.audio.paused, false);
+});

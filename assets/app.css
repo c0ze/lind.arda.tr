@@ -252,7 +252,13 @@ section.stage, section.archive, section.colophon {
   display: grid; place-items: center; padding: 0; transition: color 0.3s; }
 .btn-next:hover, .btn-loop:hover, .btn-share:hover { color: var(--accent); }
 .btn-next svg, .btn-loop svg, .btn-share svg { width: 22px; height: 22px; }
+.btn-loop { position: relative; }
 .btn-loop[aria-pressed="true"] { color: var(--accent); }
+/* "on" is not colour alone: a small lit dot under the glyph */
+.btn-loop[aria-pressed="true"]::after {
+  content: ""; position: absolute; left: 50%; bottom: -5px; width: 4px; height: 4px;
+  margin-left: -2px; border-radius: 50%; background: currentColor;
+}
 .btn-share.is-copied { color: var(--accent); }
 .scrub::-webkit-slider-thumb, .vol__slider::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%;
   background: var(--accent-bright); box-shadow: 0 0 10px var(--glow); cursor: pointer; }
