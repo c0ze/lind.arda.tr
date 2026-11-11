@@ -57,7 +57,7 @@ data/songs.js         canonical lyrics: Sindarin + English per line  ← edit he
 data/tengwar.js       generated Tengwar per line (do not hand-edit)
 audio/                lossless FLAC + MP3 fallback per song
 lyrics/               drop synced .lrc files here (see lyrics/README.md)
-songs/                WAV masters (git-ignored)
+songs/                un-mastered WAV sources (git-ignored; no script uses them)
 scripts/              one-time asset generators
 docs/superpowers/specs/  the design spec
 ```
@@ -69,8 +69,10 @@ needs none of them.
 
 **Audio** — each song ships as lossless FLAC with an MP3 fallback;
 `assets/app.js` plays the FLAC wherever `canPlayType("audio/flac")` says the
-browser can. The FLACs are the mastered tracks committed as-is; the script
-regenerates only the MP3 fallbacks from the WAV masters:
+browser can (and falls back to the MP3 if the FLAC fails to load). The FLACs
+are the mastered tracks committed as-is and are the source for everything
+else: the script regenerates each `audio/<id>.mp3` from `audio/<id>.flac`
+(never from the un-mastered WAVs in `songs/`):
 
 ```bash
 bash scripts/transcode-audio.sh
