@@ -28,7 +28,9 @@
   function writePreference(key, value) {
     try { localStorage.setItem(key, value); } catch (e) {}
   }
-  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; });
+  }
   function fmt(t) {
     if (!isFinite(t) || t < 0) t = 0;
     var m = Math.floor(t / 60), s = Math.floor(t % 60);
@@ -84,9 +86,10 @@
   }
 
   /* --- theme switch ----------------------------------------------------- */
+  var THEMES = ["twilight", "moonlit", "ember"];   // also listed in index.html's early <head> script
   function initThemes() {
     var saved = readPreference("arda-theme");
-    if (saved) document.documentElement.setAttribute("data-theme", saved);
+    if (THEMES.indexOf(saved) >= 0) document.documentElement.setAttribute("data-theme", saved);
     var current = document.documentElement.getAttribute("data-theme");
     document.querySelectorAll(".themeswitch button").forEach(function (b) {
       var name = b.getAttribute("data-theme-name");
@@ -209,7 +212,7 @@
       state.lines = flatten(song);
       scroller.innerHTML = state.lines.map(function (l, idx) {
         return '<div class="lyric" data-idx="' + idx + '">' +
-          '<div class="lyric__teng">' + teng(l.sin) + '</div>' +
+          '<div class="lyric__teng">' + esc(teng(l.sin)) + '</div>' +
           '<div class="lyric__rom">' + esc(l.sin) + '</div>' +
           '<div class="lyric__en">' + esc(l.en) + '</div></div>';
       }).join("");
@@ -527,16 +530,16 @@
       var sections = song.sections.map(function (sec) {
         var lines = sec.lines.map(function (l) {
           return '<div class="a-line">' +
-            '<div class="a-line__teng" aria-hidden="true">' + teng(l.sin) + '</div>' +
+            '<div class="a-line__teng" aria-hidden="true">' + esc(teng(l.sin)) + '</div>' +
             '<div class="a-line__rom" lang="sjn">' + esc(l.sin) + '</div>' +
             '<div class="a-line__en" lang="en">' + esc(l.en) + '</div></div>';
         }).join("");
-        return '<div class="sect sect--' + sec.kind + '"><p class="sect__label">' + sec.kind + '</p>' + lines + '</div>';
+        return '<div class="sect sect--' + String(sec.kind).replace(/[^\w-]/g, "") + '"><p class="sect__label">' + esc(sec.kind) + '</p>' + lines + '</div>';
       }).join("");
       var node = document.createElement("article");
       node.className = "song reveal";
       node.innerHTML =
-        '<div class="song__head"><div class="song__teng" aria-hidden="true">' + teng(song.title) + '</div>' +
+        '<div class="song__head"><div class="song__teng" aria-hidden="true">' + esc(teng(song.title)) + '</div>' +
         '<h3 class="song__rom">' + esc(song.title) + '</h3>' +
         '<span class="song__en">' + esc(song.titleEn) + '</span>' +
         '<button class="song__listen" type="button" data-play="' + i + '">' + LISTEN + 'listen</button></div>' +
