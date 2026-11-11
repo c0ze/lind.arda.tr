@@ -43,10 +43,13 @@ jobs:
         uses: actions/configure-pages@v6
 
       - name: Prepare site artifact
+        # Only what the site loads: from lyrics/ that is the timed .lrc files
+        # (the .txt sheets and lyrics/README.md are for the sync tool).
         run: |
-          mkdir -p _site
-          cp index.html CNAME .nojekyll LICENSE _site/
-          cp -R assets audio data lyrics _site/
+          mkdir -p _site/lyrics
+          cp index.html CNAME LICENSE _site/
+          cp -R assets audio data _site/
+          cp lyrics/*.lrc _site/lyrics/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4

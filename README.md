@@ -43,8 +43,8 @@ node scripts/stamp-versions.mjs
 ```
 
 The deployment workflow runs the suite before publishing and includes only
-`index.html`, `CNAME`, `.nojekyll`, `LICENSE`, `assets/`, `audio/`, `data/`, and
-`lyrics/` in the site artifact.
+`index.html`, `CNAME`, `LICENSE`, `assets/`, `audio/`, `data/` and
+`lyrics/*.lrc` in the site artifact.
 
 ## Structure
 
