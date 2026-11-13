@@ -244,13 +244,21 @@
         node.addEventListener("click", seekHere);
         /* A timed line is a button (see makeLinesOperable) and acts like a
            native one: Enter on keydown, Space on keyup (only if it went down on
-           this line), key repeats ignored, Space never scrolls the page. */
+           this line), key repeats ignored, Space never scrolls the page. The
+           lines share one tab stop; Up/Down/Home/End move between them. */
         function isSpace(e) { return e.key === " " || e.key === "Spacebar"; }
         var spaceArmed = false;
         node.addEventListener("keydown", function (e) {
           if (!node.hasAttribute("tabindex")) return;
           if (isSpace(e)) { e.preventDefault(); spaceArmed = true; }
           else if (e.key === "Enter") { e.preventDefault(); if (!e.repeat) seekHere(); }
+          else if (!e.altKey && !e.ctrlKey && !e.metaKey && LINE_KEYS.indexOf(e.key) >= 0) {
+            e.preventDefault();   // the page does not scroll, even at the first or last line
+            var lines = timedLines(), at = lines.indexOf(node);
+            var to = e.key === "Home" ? lines[0] : e.key === "End" ? lines[lines.length - 1] :
+              lines[Math.min(lines.length - 1, Math.max(0, at + (e.key === "ArrowDown" ? 1 : -1)))];
+            if (to && to !== node) to.focus({ preventScroll: true });   // the focus handler centres it
+          }
         });
         node.addEventListener("keyup", function (e) {
           if (!node.hasAttribute("tabindex") || !isSpace(e)) return;
@@ -259,6 +267,7 @@
         });
         node.addEventListener("blur", function () { spaceArmed = false; });
         node.addEventListener("focus", function () {
+          setTabStop(node);
           if (!state.times || !keyboardInput) return;   // a mouse click seeks; the scroll follows the song
           holdScroll = true;         // keyboard focus: keep this line in the window until focus leaves
           lyricsBox.scrollTop = 0;   // focus may scroll the overflow:hidden box; the transform does the moving
@@ -288,7 +297,7 @@
       });
     });
     scroller.addEventListener("focusout", function (e) {
-      if (!e.relatedTarget || !scroller.contains(e.relatedTarget)) releaseScroll();
+      if (!e.relatedTarget || !scroller.contains(e.relatedTarget)) { releaseScroll(); restTabStop(); }
     });
     function releaseScroll() {
       releaseAfterPointer = false;
@@ -296,17 +305,33 @@
       holdScroll = false;
       if (state.times) centerOn(scroller.children[state.active]);
     }
+    /* Roving tabindex: the timed lines are a single tab stop (tabindex 0 on
+       one, -1 on the rest), so Tab goes from the track list to one line and on
+       to the controls. While focus is in the lyrics the stop is the focused
+       line; otherwise it is the active line, or the first before playback. */
+    var LINE_KEYS = ["ArrowUp", "ArrowDown", "Home", "End"];
+    function timedLines() { return Array.prototype.slice.call(scroller.querySelectorAll(".lyric[tabindex]")); }
+    function setTabStop(node) {
+      if (!node || !node.hasAttribute("tabindex")) return;
+      timedLines().forEach(function (n) { n.setAttribute("tabindex", n === node ? "0" : "-1"); });
+    }
+    function restTabStop() {
+      var active = scroller.children[state.active];
+      setTabStop(active && active.hasAttribute("tabindex") ? active : timedLines()[0]);
+    }
+    function focusInLyrics() { var f = document.activeElement; return !!f && f !== scroller && scroller.contains(f); }
     function makeLinesOperable() {   // once timings exist, each timed line seeks: by click, Enter or Space
       scroller.querySelectorAll(".lyric").forEach(function (node) {
         if (state.times[+node.getAttribute("data-idx")] == null) return;
         var idx = node.getAttribute("data-idx");
         node.setAttribute("role", "button");
-        node.setAttribute("tabindex", "0");
+        node.setAttribute("tabindex", "-1");
         /* Named by reference, so the name survives the view toggle hiding the
            romanized or English text (the Tengwar is aria-hidden), and each part
            keeps its own lang. */
         node.setAttribute("aria-labelledby", "lyric-" + idx + "-rom" + (node.querySelector(".lyric__en").textContent ? " lyric-" + idx + "-en" : ""));
       });
+      restTabStop();
     }
     function centerOn(node) {
       var y = node ? lyricsBox.clientHeight / 2 - (node.offsetTop + node.offsetHeight / 2) : 0;
@@ -322,6 +347,7 @@
         nodes[k].classList.toggle("is-past", k < idx);
         if (k === idx) nodes[k].setAttribute("aria-current", "true"); else nodes[k].removeAttribute("aria-current");
       }
+      if (!focusInLyrics()) restTabStop();
       if (holdScroll) return;
       lyricsBox.scrollTop = 0;
       centerOn(nodes[idx]);

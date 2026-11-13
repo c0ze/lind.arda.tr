@@ -27,7 +27,7 @@ test('timed lyric lines become keyboard buttons; untimed ones stay plain text', 
   const p = await player(t);
   assert.ok(p.all('.lyric').every((n) => !n.hasAttribute('tabindex') && !n.hasAttribute('role')));
   await p.lyrics(0, '[00:10]one\n[00:20]two');
-  assert.ok(p.all('.lyric').every((n) => n.getAttribute('role') === 'button' && n.getAttribute('tabindex') === '0'));
+  assert.ok(p.all('.lyric').every((n) => n.getAttribute('role') === 'button' && n.hasAttribute('tabindex')));
   const missing = await player(t);
   missing.requests[0].resolve({ ok: false, status: 404, text: async () => '' });
   await tick();
@@ -283,4 +283,66 @@ test('Space released on a line only activates it if it was pressed there', async
   key(two, 'keydown');
   key(two, 'keyup');
   assert.equal(p.audio.currentTime, 20);
+});
+
+const tabStops = (p) => p.all('.lyric').map((n) => n.getAttribute('tabindex'));
+
+test('the timed lines are one tab stop: the first line before playback, then the active one', async (t) => {
+  const p = await player(t, { songs: threeLines() });
+  await p.lyrics(0, '[00:10]one\n[00:20]two\n[00:30]three');
+  assert.deepEqual(tabStops(p), ['0', '-1', '-1']);
+  playTo(p, 21);
+  assert.deepEqual(tabStops(p), ['-1', '0', '-1']);
+  playTo(p, 5);                                        // before the first line again
+  assert.deepEqual(tabStops(p), ['0', '-1', '-1']);
+});
+
+test('lines past the last timing stay out of the tab order', async (t) => {
+  const p = await player(t, { songs: threeLines() });
+  await p.lyrics(0, '[00:10]one\n[00:20]two');
+  assert.deepEqual(tabStops(p), ['0', '-1', null]);
+});
+
+test('Up/Down move focus between lines, Home/End go to the first and last', async (t) => {
+  const p = await player(t, { songs: threeLines() });
+  await p.lyrics(0, '[00:10]one\n[00:20]two\n[00:30]three');
+  layout(p);
+  const [one, two, three] = p.all('.lyric');
+  const press = (k) => {
+    const e = new p.w.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+    p.w.document.activeElement.dispatchEvent(e);
+    return e;
+  };
+  p.w.document.dispatchEvent(new p.w.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+  one.focus();
+  assert.equal(press('ArrowDown').defaultPrevented, true, 'the page does not scroll');
+  assert.equal(p.w.document.activeElement, two);
+  assert.deepEqual(tabStops(p), ['-1', '0', '-1'], 'the tab stop follows focus');
+  assert.equal(transform(p), 'translateY(-20px)', 'the focused line is brought into the window');
+  press('End');
+  assert.equal(p.w.document.activeElement, three);
+  press('ArrowDown');
+  assert.equal(p.w.document.activeElement, three, 'Down on the last line stays there');
+  press('Home');
+  assert.equal(p.w.document.activeElement, one);
+  press('ArrowUp');
+  assert.equal(p.w.document.activeElement, one);
+  press('ArrowDown'); press('ArrowUp');
+  assert.equal(p.w.document.activeElement, one);
+  assert.equal(p.audio.paused, true, 'moving between lines does not seek or play');
+  press('Enter');
+  assert.equal(p.audio.currentTime, 10);
+});
+
+test('while a line has focus the tab stop stays on it; when focus leaves it goes to the active line', async (t) => {
+  const p = await player(t, { songs: threeLines() });
+  await p.lyrics(0, '[00:10]one\n[00:20]two\n[00:30]three');
+  layout(p);
+  p.w.document.dispatchEvent(new p.w.KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+  p.query('.lyric[data-idx="0"]').focus();
+  playTo(p, 31);
+  assert.equal(p.query('.lyric[data-idx="2"]').getAttribute('aria-current'), 'true');
+  assert.deepEqual(tabStops(p), ['0', '-1', '-1'], 'Shift+Tab / Tab from the focused line leave the lyrics');
+  p.query('.btn-play').focus();
+  assert.deepEqual(tabStops(p), ['-1', '-1', '0']);
 });
