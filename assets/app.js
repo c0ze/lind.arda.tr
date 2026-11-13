@@ -372,6 +372,7 @@
       el.querySelector('[data-np="en"]').textContent = song.titleEn;
       durT.textContent = fmt(song.duration);   // data/songs.js matches the files; metadata refines it
       allowPlay = false;
+      clearBuffering();
       audio.pause();              // src changes don't reliably fire pause (Safari) and can auto-resume (Chromium)
       audio.src = state.src = pickAudio(song);
       statusLine.textContent = "";
@@ -404,11 +405,29 @@
     playBtn.addEventListener("click", function () { if (audio.paused) startPlay(); else pauseByVisitor(); });
     audio.addEventListener("play", function () { if (!allowPlay) { audio.pause(); return; } playBtn.innerHTML = PAUSE; playBtn.setAttribute("aria-label", "Pause"); setPlaybackState("playing"); });
     audio.addEventListener("pause", showPaused);
+
+    /* A stall (connection drop, slow network) fires only "waiting"/"stalled",
+       and the browser's own error can take half a minute: after 2 s of
+       waiting while playing, say so quietly. */
+    var BUFFERING = "Buffering\u2026", bufferTimer = null;
+    function clearBuffering() {
+      clearTimeout(bufferTimer); bufferTimer = null;
+      if (statusLine.textContent === BUFFERING) statusLine.textContent = "";
+    }
+    audio.addEventListener("waiting", function () {
+      clearTimeout(bufferTimer);
+      bufferTimer = setTimeout(function () {
+        bufferTimer = null;
+        if (allowPlay && !audio.paused && !statusLine.textContent) statusLine.textContent = BUFFERING;
+      }, 2000);
+    });
+    ["playing", "pause", "seeked"].forEach(function (e) { audio.addEventListener(e, clearBuffering); });
     function showPaused() { playBtn.innerHTML = PLAY; playBtn.setAttribute("aria-label", "Play"); setPlaybackState("paused"); }
 
     /* A source that fails to load: a FLAC gets one retry as the song's MP3,
        from the same moment and in the same play state; otherwise say so. */
     audio.addEventListener("error", function () {
+      clearBuffering();
       var song = SONGS[state.i];
       if (state.src === song.audioFlac && song.audio && song.audio !== song.audioFlac) {
         var playing = allowPlay;     // false after the visitor paused: stay paused on the MP3

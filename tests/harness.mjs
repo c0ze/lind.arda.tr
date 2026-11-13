@@ -25,12 +25,13 @@ export function testSongs(ids = ['a', 'b'], duration = 100) {
    mediaSession    install a recording navigator.mediaSession + MediaMetadata
    reduce          prefers-reduced-motion answer (default true: no animation)
    keepCanvas      keep the hero canvas (the motes tests stub it themselves)
+   clock           replace setTimeout/clearTimeout with a manual clock (p.clock)
    songs           window.ARDA_SONGS
    before(w)       runs just before app.js, for extra stubs */
 export async function player(t, opts = {}) {
   const {
     hash = '', storage = {}, blockedStorage = false, flac = '', ready = true, playRejects = null,
-    mediaSession = false, reduce = true, keepCanvas = false, songs = testSongs(), before,
+    mediaSession = false, reduce = true, keepCanvas = false, clock: manual = false, songs = testSongs(), before,
   } = opts;
   const dom = new JSDOM(html, { url: 'https://lind.example/' + hash, runScripts: 'outside-only' });
   t.after(() => dom.window.close());
@@ -91,6 +92,28 @@ export async function player(t, opts = {}) {
     Object.defineProperty(w.navigator, 'mediaSession', { value: session, configurable: true });
     w.MediaMetadata = class { constructor(o) { Object.assign(this, o); } };
   }
+  let clock = null;
+  if (manual) {   // timers run only when the test advances the clock
+    const timers = new Map();
+    let now = 0, nextId = 1;
+    w.setTimeout = (fn, ms = 0) => { const id = nextId++; timers.set(id, { fn, at: now + Math.max(0, Number(ms) || 0) }); return id; };
+    w.clearTimeout = (id) => { timers.delete(id); };
+    clock = {
+      pending: () => [...timers.values()].map((x) => x.at - now).sort((a, b) => a - b),
+      advance(ms) {
+        const end = now + ms;
+        for (;;) {
+          let due = null;
+          for (const [id, x] of timers) if (x.at <= end && (!due || x.at < due[1].at)) due = [id, x];
+          if (!due) break;
+          timers.delete(due[0]);
+          now = due[1].at;
+          due[1].fn();
+        }
+        now = end;
+      },
+    };
+  }
   w.ARDA_SONGS = songs;
   const requests = [];
   w.fetch = (url) => new Promise((resolve, reject) => requests.push({ url, resolve, reject }));
@@ -98,7 +121,7 @@ export async function player(t, opts = {}) {
   w.eval(source);
   const query = (selector) => w.document.querySelector(selector);
   return {
-    w, audio: audio[0], audios: audio, requests, session, scrolled, scrollOptions, query,
+    w, audio: audio[0], audios: audio, requests, session, clock, scrolled, scrollOptions, query,
     all: (selector) => [...w.document.querySelectorAll(selector)],
     current: () => [...w.document.querySelectorAll('.track')].findIndex((x) => x.getAttribute('aria-current') === 'true'),
     async lyrics(index, text) {
