@@ -21,8 +21,10 @@ const TYPES = {
   '.mp3': 'audio/mpeg', '.flac': 'audio/flac', '.ttf': 'font/ttf', '.woff2': 'font/woff2',
   '.lrc': 'text/plain; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.md': 'text/plain; charset=utf-8',
 };
-// Never serve repo internals, secrets or the git-ignored masters.
-const HIDDEN = /(^|\/)(\.[^/]*|node_modules|songs)(\/|$)/;
+// Never serve repo internals, secrets or the git-ignored masters. Case-
+// insensitive: on a case-insensitive disk (macOS, Windows) /Songs/ and
+// /NODE_MODULES/ open the same files.
+const HIDDEN = /(^|\/)(\.[^/]*|node_modules|songs)(\/|$)/i;
 
 function send(res, code, text) {
   res.writeHead(code, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
