@@ -153,9 +153,12 @@ test('clicking a lyric line with the mouse does not freeze the scrolling', async
 
 test('theme buttons keep their text name on narrow screens (clipped, not display:none)', async () => {
   const css = await readFile(new URL('../assets/app.css', import.meta.url), 'utf8');
-  const narrow = /@media \(max-width: 760px\) \{([\s\S]*?)\n\}/.exec(css)[1];
-  assert.doesNotMatch(narrow, /\.themeswitch \.lbl \{[^}]*display:\s*none/);
-  assert.match(narrow, /\.themeswitch \.lbl \{[^}]*clip-path: inset\(50%\)/);
+  const blocks = [...css.matchAll(/@media \(max-width: (\d+)px\) \{([\s\S]*?)\n\}/g)];
+  const narrow = blocks.find((m) => /\.themeswitch \.lbl \{/.test(m[2]));
+  assert.ok(narrow, 'the labels are hidden on narrow screens');
+  assert.doesNotMatch(narrow[2], /\.themeswitch \.lbl \{[^}]*display:\s*none/);
+  assert.match(narrow[2], /\.themeswitch \.lbl \{[^}]*clip-path: inset\(50%\)/);
+  assert.ok(blocks.every((m) => !/display:\s*none/.test((/\.themeswitch \.lbl \{[^}]*\}/.exec(m[2]) || [''])[0])));
 });
 
 test('the seek slider counts seconds and says where it is in words', async (t) => {

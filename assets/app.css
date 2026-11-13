@@ -106,7 +106,7 @@ em { font-style: italic; }
 .topnav { display: flex; gap: 1.6rem; }
 .topnav a {
   font-size: 0.82rem; letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--muted); transition: color 0.3s;
+  color: var(--muted); transition: color 0.3s; white-space: nowrap;
 }
 @media (hover: hover) { .topnav a:hover { color: var(--accent); } }
 .themeswitch { display: flex; gap: 0.25rem; }
@@ -336,17 +336,21 @@ section.stage, section.archive, section.colophon {
 .footer .teng { font-size: 1.2rem; color: var(--accent-deep); }
 
 /* --- responsive --------------------------------------------------------- */
+/* the nav and the theme names need about 845px side by side: below that the
+   theme buttons show only their dots (iPad portrait keeps the nav) */
+@media (max-width: 880px) {
+  .themeswitch .lbl {   /* only the dot shows; the name stays for screen readers */
+    position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden;
+    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+  }
+  .themeswitch button { padding: 0.4rem; }
+}
 @media (max-width: 760px) {
   .topnav { display: none; }
   .vol { display: none; }
   .controls { gap: 0.8rem; }
   .btn-play { width: 46px; height: 46px; }
   .time { min-width: 2.6em; font-size: 0.85rem; }
-  .themeswitch .lbl {   /* only the dot shows; the name stays for screen readers */
-    position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden;
-    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
-  }
-  .themeswitch button { padding: 0.4rem; }
   body { font-size: 18px; }
   section.stage, section.archive, section.colophon { padding: 4rem 1.3rem; }
 }

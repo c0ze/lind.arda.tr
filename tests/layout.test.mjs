@@ -92,3 +92,15 @@ test("Firefox's own range track is transparent, so the progress fill behind it s
     assert.match(m[1] || m[2], /background(-color)?:\s*transparent/, slider);
   }
 });
+
+const maxWidth = (px) => mediaBlocks(new RegExp('\\(max-width: ' + px + 'px\\)')).join('\n');
+
+test('the top nav stays on one line wherever it shows (iPad portrait is 768-834px wide)', () => {
+  assert.match(rule('.topnav a'), /white-space:\s*nowrap/);
+  // where the nav shows next to the theme names it needs about 845px; below
+  // that the theme buttons show only their dots
+  const navHidden = Math.max(...[...css.matchAll(/@media \(max-width: (\d+)px\) \{[^@]*?\.topnav \{ display: none; \}/g)].map((m) => +m[1]));
+  const labelsClipped = Math.max(...[...css.matchAll(/@media \(max-width: (\d+)px\) \{[^@]*?\.themeswitch \.lbl \{/g)].map((m) => +m[1]));
+  assert.ok(navHidden < 768, 'the nav shows on iPad portrait');
+  assert.ok(labelsClipped >= 860, `theme names clipped up to ${labelsClipped}px`);
+});
