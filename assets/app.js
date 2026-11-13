@@ -665,11 +665,15 @@
     }
     function copyBySelection(text) {   // older browsers, and a refused clipboard permission
       var ta = document.createElement("textarea"), ok = false;
+      var had = document.activeElement;   // select() moves focus; removing the textarea would drop it to <body>
       ta.value = text; ta.setAttribute("readonly", "");
       ta.style.position = "fixed"; ta.style.opacity = "0";
       document.body.appendChild(ta); ta.select();
       try { ok = !!document.execCommand("copy"); } catch (e) {}
       document.body.removeChild(ta);
+      if (had && had !== document.body && typeof had.focus === "function") {
+        try { had.focus({ preventScroll: true }); } catch (e) {}
+      }
       return ok;
     }
     function copyText(text) {

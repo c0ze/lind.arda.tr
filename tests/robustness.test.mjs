@@ -128,3 +128,21 @@ test('without the async clipboard API the selection copy is used', async (t) => 
   await tick(); await tick();
   assert.equal(p.query('.share-status').textContent, 'Link copied');
 });
+
+test('the selection copy gives keyboard focus back to the Share button', async (t) => {
+  const p = await player(t, {
+    before(w) { w.HTMLTextAreaElement.prototype.select = function () { this.focus(); }; },   // as Chromium does
+  });
+  clipboard(p.w, () => Promise.reject(new Error('denied')));
+  p.w.document.execCommand = () => true;
+  const share = p.query('.btn-share');
+  share.focus();
+  let scrolled = null;
+  const focus = share.focus;
+  share.focus = function (opts) { scrolled = opts; return focus.call(this, opts); };
+  share.click();
+  await tick(); await tick();
+  assert.equal(p.query('.share-status').textContent, 'Link copied');
+  assert.equal(p.w.document.activeElement, share);
+  assert.equal(scrolled?.preventScroll, true, "without scrolling the page");
+});
