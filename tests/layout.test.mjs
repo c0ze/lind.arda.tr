@@ -104,3 +104,11 @@ test('the top nav stays on one line wherever it shows (iPad portrait is 768-834p
   assert.ok(navHidden < 768, 'the nav shows on iPad portrait');
   assert.ok(labelsClipped >= 860, `theme names clipped up to ${labelsClipped}px`);
 });
+
+test('on a 320px phone the transport and the view toggle each keep to one row', () => {
+  const tiny = maxWidth(340);
+  assert.match(tiny, /\.time\s*\{[^}]*min-width:\s*0/, 'the time readouts shrink to their text');
+  const scrubMin = /\.scrub\s*\{[^}]*min-width:\s*(\d+)px/.exec(tiny);
+  assert.ok(scrubMin && +scrubMin[1] <= 40, 'the scrubber may shrink');
+  assert.match(tiny + maxWidth(370), /\.viewtoggle button\s*\{[^}]*padding:/, 'the toggle buttons take less room');
+});

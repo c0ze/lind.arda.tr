@@ -360,6 +360,17 @@ section.stage, section.archive, section.colophon {
   .scrub { min-width: 56px; }
   .viewtoggle button { font-size: 0.74rem; letter-spacing: 0.08em; padding: 0.3rem 0.6rem; }
 }
+@media (max-width: 370px) {
+  .viewtoggle { gap: 0.25rem; }
+  .viewtoggle button { letter-spacing: 0.05em; padding: 0.3rem 0.45rem; }
+}
+/* 320px: the time readouts shrink to their text and the scrubber gives way */
+@media (max-width: 340px) {
+  .controls { gap: 0.4rem; }
+  .time { min-width: 0; font-size: 0.8rem; letter-spacing: 0.02em; }
+  .scrub { min-width: 40px; }
+  .viewtoggle button { font-size: 0.7rem; letter-spacing: 0.04em; padding: 0.3rem 0.4rem; }
+}
 
 /* --- reduced motion ----------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
