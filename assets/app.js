@@ -281,7 +281,12 @@
        on them has done its click (never on the press itself, which would move
        the line under the pointer), and when the lyrics are re-rendered. */
     var holdScroll = false, keyboardInput = true, releaseAfterPointer = false;
-    document.addEventListener("keydown", function () {
+    /* Only keys that move focus or operate a line count as keyboard use: a
+       modifier on its own (Shift, the Cmd of Cmd+Tab) or a shortcut must not
+       freeze the scroll after a mouse click. */
+    var HOLD_KEYS = ["Tab", "Enter", " ", "Spacebar", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"];
+    document.addEventListener("keydown", function (e) {
+      if (e.metaKey || e.ctrlKey || e.altKey || HOLD_KEYS.indexOf(e.key) < 0) return;
       keyboardInput = true;
       var f = document.activeElement;   // keyboard use begins on a line focused by the pointer
       if (state.times && f && f !== scroller && scroller.contains(f) && f.hasAttribute("tabindex")) holdScroll = true;

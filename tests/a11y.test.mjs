@@ -262,7 +262,7 @@ test('pressing a key on a line focused by the mouse holds it in view', async (t)
   three.click();                                       // seeks to 30
   playTo(p, 30);
   assert.equal(transform(p), 'translateY(-120px)', 'line 3 is active and centred');
-  three.dispatchEvent(new p.w.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));   // now on the keyboard
+  three.dispatchEvent(new p.w.KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));   // now on the keyboard
   playTo(p, 11);
   assert.equal(transform(p), 'translateY(-120px)', 'the focused line stays put');
   assert.equal(p.query('.lyric[data-idx="0"]').getAttribute('aria-current'), 'true');
@@ -345,4 +345,24 @@ test('while a line has focus the tab stop stays on it; when focus leaves it goes
   assert.deepEqual(tabStops(p), ['0', '-1', '-1'], 'Shift+Tab / Tab from the focused line leave the lyrics');
   p.query('.btn-play').focus();
   assert.deepEqual(tabStops(p), ['-1', '-1', '0']);
+});
+
+test('modifier keys and shortcuts after a mouse click do not freeze the lyric scroll', async (t) => {
+  const p = await player(t, { songs: threeLines() });
+  await p.lyrics(0, '[00:10]one\n[00:20]two\n[00:30]three');
+  layout(p);
+  const three = p.query('.lyric[data-idx="2"]');
+  three.dispatchEvent(new p.w.MouseEvent('mousedown', { bubbles: true }));
+  three.focus();
+  three.click();
+  const keys = [{ key: 'Shift' }, { key: 'Meta' }, { key: 'Control' }, { key: 'Alt' }, { key: 'CapsLock' },
+    { key: 'Tab', metaKey: true }, { key: 'Tab', ctrlKey: true }, { key: 'ArrowDown', altKey: true },
+    { key: 'c', metaKey: true }, { key: 'a' }];
+  for (const k of keys) three.dispatchEvent(new p.w.KeyboardEvent('keydown', { ...k, bubbles: true, cancelable: true }));
+  // Cmd+Tab away and back: the window gives the line its focus again
+  three.blur();
+  three.focus();
+  playTo(p, 21);
+  assert.equal(transform(p), 'translateY(-20px)', 'the lines still follow the song');
+  assert.equal(p.w.document.activeElement, three, 'and focus stayed put');
 });
