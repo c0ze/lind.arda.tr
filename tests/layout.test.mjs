@@ -72,3 +72,14 @@ test('scrolling to an element (focus, anchors, share links) clears the sticky to
   const margin = rem(rule('.player'), 'scroll-margin-top');
   assert.ok(margin > 0 && (padding + margin) * 16 <= 72, `${padding}rem + ${margin}rem`);
 });
+
+test('hover styles apply only where there is a real hover (they stick after a tap on touch screens)', () => {
+  const hoverBlocks = mediaBlocks(/\(hover:\s*hover\)/);
+  assert.ok(hoverBlocks.join('').includes(':hover'));
+  let outside = css;
+  for (const b of hoverBlocks) outside = outside.replace(b, '');
+  const stray = outside.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter((l) => l.includes(':hover'));
+  assert.deepEqual(stray, []);
+  // the tapped lyric line in particular must not stay bright once it is no longer active
+  assert.ok(hoverBlocks.some((b) => /\.lyric:hover/.test(b)));
+});

@@ -48,6 +48,8 @@
 }
 
 /* --- base --------------------------------------------------------------- */
+/* Every :hover rule sits in @media (hover: hover): on a touch screen a tap
+   leaves :hover stuck, which would keep a tapped lyric line bright. */
 * { box-sizing: border-box; }
 /* scroll-padding-top: anything scrolled into view (keyboard focus, section
    links, share links) lands below the sticky top bar (about 48px) */
@@ -106,7 +108,7 @@ em { font-style: italic; }
   font-size: 0.82rem; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--muted); transition: color 0.3s;
 }
-.topnav a:hover { color: var(--accent); }
+@media (hover: hover) { .topnav a:hover { color: var(--accent); } }
 .themeswitch { display: flex; gap: 0.25rem; }
 .themeswitch button {
   display: flex; align-items: center; gap: 0.4rem;
@@ -154,7 +156,7 @@ em { font-style: italic; }
   margin-top: 3rem; color: var(--muted); transition: color 0.3s;
   font-size: 0.78rem; letter-spacing: 0.24em; text-transform: uppercase;
 }
-.hero__cue:hover { color: var(--accent); }
+@media (hover: hover) { .hero__cue:hover { color: var(--accent); } }
 .hero__cue svg { animation: nudge 2.4s ease-in-out infinite; }
 
 @keyframes breathe {
@@ -191,7 +193,7 @@ section.stage, section.archive, section.colophon {
   font-family: var(--font-body); display: flex; gap: 0.9rem; align-items: baseline;
   transition: background-color 0.3s, border-color 0.3s, transform 0.3s;
 }
-.track:hover { background: var(--panel); transform: translateY(-2px); }
+@media (hover: hover) { .track:hover { background: var(--panel); transform: translateY(-2px); } }
 .track__num { font-family: var(--font-display); font-size: 0.95rem; color: var(--muted); min-width: 1.7em; }
 .track__rom { font-family: var(--font-display); font-size: 1.1rem; letter-spacing: 0.03em; }
 .track__en { font-style: italic; color: var(--muted); font-size: 0.98rem; }
@@ -233,7 +235,7 @@ section.stage, section.archive, section.colophon {
 .lyrics.is-synced .lyric.is-active .lyric__teng { text-shadow: 0 0 26px var(--glow); }
 .lyrics.is-synced .lyric.is-active .lyric__en { color: var(--accent); }
 .lyrics.is-synced .lyric.is-past { opacity: 0.32; }
-.lyric:hover { color: var(--ink); }
+@media (hover: hover) { .lyric:hover { color: var(--ink); } }
 
 /* view modes: hide representations not selected */
 .lyrics[data-view="teng"] .lyric__rom,
@@ -250,7 +252,7 @@ section.stage, section.archive, section.colophon {
   background: none; border: 1px solid var(--accent); color: var(--accent);
   cursor: pointer; display: grid; place-items: center; transition: background-color 0.3s, color 0.3s, box-shadow 0.3s;
 }
-.btn-play:hover { background: var(--accent); color: var(--bg); box-shadow: 0 0 22px var(--glow); }
+@media (hover: hover) { .btn-play:hover { background: var(--accent); color: var(--bg); box-shadow: 0 0 22px var(--glow); } }
 .btn-play svg { width: 22px; height: 22px; }
 .time { font-size: 0.92rem; letter-spacing: 0.06em; color: var(--muted); min-width: 3.2em; text-align: center; }
 /* a 3px line inside a 24px-tall hit area: the padding is transparent */
@@ -262,11 +264,11 @@ section.stage, section.archive, section.colophon {
 .vol__slider[hidden] { display: none; }   /* where the volume cannot be set (iPadOS) */
 .vol__btn { background: none; border: none; color: var(--muted); cursor: pointer; display: grid;
   place-items: center; padding: 0; min-width: 24px; min-height: 24px; transition: color 0.3s; }
-.vol__btn:hover { color: var(--accent); }
+@media (hover: hover) { .vol__btn:hover { color: var(--accent); } }
 .vol__btn svg { width: 20px; height: 20px; }
 .btn-next, .btn-loop, .btn-share { flex: none; background: none; border: none; color: var(--muted); cursor: pointer;
   display: grid; place-items: center; padding: 0; min-width: 24px; min-height: 24px; transition: color 0.3s; }
-.btn-next:hover, .btn-loop:hover, .btn-share:hover { color: var(--accent); }
+@media (hover: hover) { .btn-next:hover, .btn-loop:hover, .btn-share:hover { color: var(--accent); } }
 .btn-next svg, .btn-loop svg, .btn-share svg { width: 22px; height: 22px; }
 .btn-loop { position: relative; }
 .btn-loop[aria-pressed="true"] { color: var(--accent); }
@@ -303,7 +305,7 @@ section.stage, section.archive, section.colophon {
   font-family: var(--font-body); font-style: italic; font-size: 1rem; display: inline-flex; align-items: center; gap: 0.35rem;
   min-height: 24px;
 }
-.song__listen:hover { color: var(--accent-bright); }
+@media (hover: hover) { .song__listen:hover { color: var(--accent-bright); } }
 .song__listen svg { width: 15px; height: 15px; }
 
 .sect { margin-bottom: 2rem; }
@@ -321,7 +323,7 @@ section.stage, section.archive, section.colophon {
 .colophon__grid { display: grid; gap: 1.4rem; max-width: 62ch; }
 .colophon p { color: var(--muted); margin: 0; font-size: 1.08rem; }
 .colophon a { color: var(--accent); border-bottom: 1px solid var(--accent-deep); }
-.colophon a:hover { color: var(--accent-bright); }
+@media (hover: hover) { .colophon a:hover { color: var(--accent-bright); } }
 .colophon__note { font-style: italic; }
 .footer {
   display: flex; align-items: center; justify-content: center; gap: 0.7rem;
