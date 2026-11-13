@@ -260,3 +260,25 @@ test('paused, then ended (a seek to the very end): the next track does not start
   assert.equal(fresh.current(), 0);
   assert.equal(fresh.audio.paused, true);
 });
+
+test('where the volume cannot be set (iPadOS), the slider is hidden and mute still works', async (t) => {
+  const p = await player(t, {
+    storage: { 'arda-volume': '0.4' },
+    before(w) {
+      const Base = w.Audio;
+      w.Audio = class extends Base {   // iPadOS: audio.volume is always 1, writes are ignored
+        constructor() { super(); Object.defineProperty(this, 'volume', { get: () => 1, set: () => {}, configurable: true }); }
+      };
+    },
+  });
+  const slider = p.query('.vol__slider');
+  assert.equal(slider.hidden, true);
+  assert.equal(p.w.localStorage.getItem('arda-volume'), '0.4', 'the stored level is left alone');
+  p.query('.vol__btn').click();
+  assert.equal(p.audio.muted, true);
+  assert.equal(p.query('.vol__btn').getAttribute('aria-label'), 'Unmute');
+  // where it can be set, the slider stays and the probe leaves the level as it was
+  const normal = await player(t, { storage: { 'arda-volume': '0.4' } });
+  assert.equal(normal.query('.vol__slider').hidden, false);
+  assert.equal(normal.audio.volume, 0.4);
+});

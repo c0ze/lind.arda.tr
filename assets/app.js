@@ -511,6 +511,15 @@
       audio.muted = m;
       if (save) writePreference("arda-muted", m ? "1" : "0");
     }
+    /* iPadOS ignores audio.volume (it reads back 1), so a slider there would
+       do nothing and snap back to full: probe once, and keep only the mute
+       button where the level cannot be set. */
+    function volumeSettable() {
+      var was = audio.volume, probe = was === 0.5 ? 0.25 : 0.5, ok = false;
+      try { audio.volume = probe; ok = Math.abs(audio.volume - probe) < 0.01; audio.volume = was; } catch (e) {}
+      return ok;
+    }
+    if (!volumeSettable()) volSlider.hidden = true;
     var savedVol = parseFloat(readPreference("arda-volume"));
     setVolume(isNaN(savedVol) ? 1 : savedVol, false);
     setMuted(readPreference("arda-muted") === "1", false);

@@ -259,6 +259,7 @@ section.stage, section.archive, section.colophon {
 .scrub { flex: 1; min-width: 80px; }
 .vol { display: flex; align-items: center; gap: 0.5rem; flex: none; }
 .vol__slider { width: 84px; }
+.vol__slider[hidden] { display: none; }   /* where the volume cannot be set (iPadOS) */
 .vol__btn { background: none; border: none; color: var(--muted); cursor: pointer; display: grid;
   place-items: center; padding: 0; min-width: 24px; min-height: 24px; transition: color 0.3s; }
 .vol__btn:hover { color: var(--accent); }
