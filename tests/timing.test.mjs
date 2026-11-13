@@ -174,3 +174,27 @@ test('changing track drops the old line timer', async (t) => {
   p.query('.track[data-i="1"]').click();
   assert.deepEqual(p.clock.pending(), []);
 });
+
+test('a media clock that stops while "playing" does not keep the line timer ticking', async (t) => {
+  const p = await player(t, { songs: threeLines(), clock: true });
+  await p.lyrics(0, '[00:10]one\n[00:20]two\n[00:30]three');
+  p.query('.btn-play').click();
+  p.audio.currentTime = 19.995;                        // just short of a line, and stuck there
+  p.audio.emit('timeupdate');
+  assert.deepEqual(p.clock.pending(), [20]);
+  let firings = 0;
+  while (p.clock.pending().length && firings < 50) { p.clock.advance(p.clock.pending()[0]); firings++; }
+  assert.ok(firings <= 4, `gave up after ${firings} retries without progress`);
+  assert.deepEqual(p.clock.pending(), []);
+  p.audio.emit('timeupdate');                          // a timeupdate with the clock still stuck: still idle
+  assert.deepEqual(p.clock.pending(), []);
+  p.audio.currentTime = 19.998;                        // the clock moves again: timeupdate re-arms it
+  p.audio.emit('timeupdate');
+  assert.equal(p.clock.pending().length, 1);
+  while (p.clock.pending().length) p.clock.advance(p.clock.pending()[0]);
+  p.audio.emit('playing');                             // and so does playing (or seeked), even at the same time
+  assert.equal(p.clock.pending().length, 1);
+  p.audio.currentTime = 20.01;
+  p.clock.advance(p.clock.pending()[0]);
+  assert.equal(active(p), 1);
+});
