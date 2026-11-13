@@ -282,3 +282,28 @@ test('where the volume cannot be set (iPadOS), the slider is hidden and mute sti
   assert.equal(normal.query('.vol__slider').hidden, false);
   assert.equal(normal.audio.volume, 0.4);
 });
+
+test('after the album finishes, turning loop on and seeking to the end while paused does not start it again', async (t) => {
+  const p = await player(t, { storage: { 'arda-loop': '0' } });
+  const scrub = p.query('.scrub');
+  p.query('.track[data-i="1"]').click();
+  p.query('.btn-play').click();
+  p.audio.paused = true;
+  p.audio.emit('pause');
+  p.audio.emit('ended');                               // the last track ends, loop off: the album is over
+  assert.equal(p.current(), 1);
+  assert.equal(p.audio.paused, true);
+  p.query('.btn-loop').click();                        // loop on
+  assert.equal(p.query('.btn-loop').getAttribute('aria-pressed'), 'true');
+  scrub.value = '50';                                  // scrub back...
+  scrub.dispatchEvent(new p.w.Event('input'));
+  scrub.value = scrub.max;                             // ...then to the very end, still paused
+  scrub.dispatchEvent(new p.w.Event('input'));
+  p.audio.emit('ended');
+  assert.equal(p.current(), 1, 'the first track does not start');
+  assert.equal(p.audio.paused, true);
+  p.query('.btn-play').click();                        // Play after the album still plays
+  assert.equal(p.audio.paused, false);
+  assert.equal(p.query('.btn-play').getAttribute('aria-label'), 'Pause');
+  assert.equal(p.current(), 1);
+});

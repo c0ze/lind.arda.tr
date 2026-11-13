@@ -620,6 +620,7 @@
       if (!allowPlay) return;
       if (state.i < SONGS.length - 1) playIndex(state.i + 1);
       else if (loopMode) playIndex(0);
+      else allowPlay = false;   // the album is over: a later "ended" (a paused seek to the end) must not restart it
     });
 
     function setPlaybackState(s) {
