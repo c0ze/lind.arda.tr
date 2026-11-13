@@ -363,6 +363,7 @@
       dropPendingSeek();
       var requestSelection = ++selection;
       state.i = i; state.active = -1; state.times = null;
+      stopLineTimer();
       var song = SONGS[i];
       Array.prototype.forEach.call(el.querySelectorAll(".track"), function (t) {
         t.setAttribute("aria-current", String(+t.getAttribute("data-i") === i));
@@ -452,12 +453,34 @@
     });
     audio.addEventListener("timeupdate", function () {   // (a src change resets the media to 0)
       showPosition(pendingSeek != null && audio.paused ? pendingSeek : audio.currentTime);
-      if (state.times) {
-        var a = -1;
-        for (var k = 0; k < state.times.length; k++) { if (state.times[k] <= audio.currentTime) a = k; else break; }
-        setActive(a);
-      }
+      syncLyrics();
     });
+
+    /* The active line follows audio.currentTime. timeupdate alone comes only
+       every ~250 ms, so while playing a timer is also set for the next line's
+       time; it re-reads currentTime when it fires (no drift: a timer that
+       fires early just re-arms) and is re-armed on play, seeked, ratechange
+       and every timeupdate. None runs while paused, stalled, ended, failed or
+       in a hidden tab. */
+    var lineTimer = null, mediaWaiting = false;
+    function syncLyrics() {
+      clearTimeout(lineTimer); lineTimer = null;
+      if (!state.times) return;
+      var a = -1, now = audio.currentTime;
+      for (var k = 0; k < state.times.length; k++) { if (state.times[k] <= now) a = k; else break; }
+      setActive(a);
+      var next = state.times[a + 1], rate = audio.playbackRate;
+      if (next == null || !(rate > 0) || audio.paused || !allowPlay || mediaWaiting || document.hidden) return;
+      lineTimer = setTimeout(syncLyrics, Math.max(20, ((next - now) / rate) * 1000));
+    }
+    function stopLineTimer() { clearTimeout(lineTimer); lineTimer = null; }
+    audio.addEventListener("waiting", function () { mediaWaiting = true; stopLineTimer(); });
+    ["play", "playing"].forEach(function (e) {
+      audio.addEventListener(e, function () { mediaWaiting = false; syncLyrics(); });
+    });
+    ["seeked", "ratechange"].forEach(function (e) { audio.addEventListener(e, syncLyrics); });
+    ["pause", "ended", "error", "emptied"].forEach(function (e) { audio.addEventListener(e, stopLineTimer); });
+    document.addEventListener("visibilitychange", function () { if (document.hidden) stopLineTimer(); else syncLyrics(); });
     scrub.addEventListener("input", function () {
       var d = songLength(), t = +scrub.value;
       dropPendingSeek();
