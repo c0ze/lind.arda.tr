@@ -8,7 +8,8 @@ Drop one timed `.lrc` file per song here, named by song id:
 
 Produce them with the **lyrics-sync** tool (`~/projects/music/lyrics-sync`):
 
-1. Load the song's audio (`../audio/<id>.mp3` or the WAV master).
+1. Load the song's audio: the mastered `../audio/<id>.flac` or its
+   `../audio/<id>.mp3` (not the un-mastered WAVs in `../songs/`).
 2. Load the matching ready-made text sheet from this folder: `<id>.txt`
    (`gwannad-i-lu.txt`, `i-dhae-odog.txt`, `i-dann-haer.txt`) — one romanized
    Sindarin line per lyric line, section-spaced (the tool skips blank lines).
