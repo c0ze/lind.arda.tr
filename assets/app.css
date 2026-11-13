@@ -354,3 +354,8 @@ section.stage, section.archive, section.colophon {
   .reveal { transition: none; opacity: 1; transform: none; }
   .lyrics.is-synced .lyric.is-active .lyric__teng { text-shadow: none; }
 }
+
+/* --- print: nothing waits to be scrolled to ----------------------------- */
+@media print {
+  .reveal { opacity: 1; transform: none; transition: none; }
+}

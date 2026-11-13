@@ -675,9 +675,13 @@
       items.forEach(function (n) { n.classList.add("in"); });
       return;
     }
+    /* Any part on screen counts (threshold 0): an archive song is thousands of
+       pixels tall, more than a short window (a landscape phone, 200% zoom)
+       could ever show a fixed share of. The small negative bottom margin keeps
+       the fade visible as a block comes up. */
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
-    }, { threshold: 0.12 });
+    }, { threshold: 0, rootMargin: "0px 0px -5% 0px" });
     items.forEach(function (n) { io.observe(n); });
   }
 
