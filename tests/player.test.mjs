@@ -240,3 +240,23 @@ test('the play button pauses while playing, and Next wraps around', async (t) =>
   p.query('.btn-next').click();
   assert.equal(p.current(), 0);
 });
+
+test('paused, then ended (a seek to the very end): the next track does not start', async (t) => {
+  const p = await player(t, { storage: { 'arda-loop': '1' } });
+  const scrub = p.query('.scrub');
+  p.query('.btn-play').click();
+  p.query('.btn-play').click();                        // the visitor pauses
+  scrub.value = scrub.max;                             // End, or a drag to the right edge
+  scrub.dispatchEvent(new p.w.Event('input'));
+  assert.equal(p.audio.currentTime, 100);
+  p.audio.emit('ended');                               // Firefox and Safari fire it while paused
+  assert.equal(p.current(), 0);
+  assert.equal(p.audio.paused, true);
+  assert.equal(p.query('.btn-play').getAttribute('aria-label'), 'Play');
+  // never played at all: the same
+  const fresh = await player(t);
+  fresh.audio.currentTime = 100;
+  fresh.audio.emit('ended');
+  assert.equal(fresh.current(), 0);
+  assert.equal(fresh.audio.paused, true);
+});

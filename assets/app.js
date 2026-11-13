@@ -563,6 +563,10 @@
       loopBtn.setAttribute("aria-pressed", String(loopMode));
     });
     audio.addEventListener("ended", function () {   // play the album through; wrap only when looping
+      /* Only if the visitor asked for playback: Firefox and Safari also fire
+         "ended" when a paused track is seeked to its very end (the slider's
+         End key or right edge). */
+      if (!allowPlay) return;
       if (state.i < SONGS.length - 1) playIndex(state.i + 1);
       else if (loopMode) playIndex(0);
     });
