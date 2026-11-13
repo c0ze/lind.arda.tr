@@ -1,6 +1,7 @@
 /* Cache-busting for a site with no build step. GitHub Pages lets browsers
  * cache files for hours, so index.html asks for each file with a ?v= that is
- * a short hash of its content:
+ * a short hash of its content, and a new index.html never gets an old cached
+ * copy of them:
  *
  *   assets/app.css?v=<hash of app.css>
  *   assets/app.js?v=<hash of app.js>
@@ -9,7 +10,13 @@
  * The data hash covers data/*.js and lyrics/*.lrc; app.js reads it from the
  * songs.js tag and adds it to every .lrc request, so it is the one version
  * constant for the lyrics too. tests/versions.test.mjs fails when a value is
- * stale. After editing any of those files, run:
+ * stale.
+ *
+ * What the stamps do not cover: index.html itself. A cached index.html keeps
+ * its old stamps, and Pages ignores the query string and serves the current
+ * file, so until that page expires it can load newer JS or data than it was
+ * written for. (The edge cache time for index.html is a Cloudflare rule, not
+ * part of this repo.) After editing any of those files, run:
  *
  *   node scripts/stamp-versions.mjs
  */

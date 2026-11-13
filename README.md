@@ -34,7 +34,12 @@ npm test
 ```
 
 `index.html` loads the CSS, the scripts and (through `app.js`) the `.lrc`
-files with a `?v=` content hash, so browsers never keep a stale copy. After
+files with a `?v=` content hash, so a new `index.html` never picks up an old
+cached copy of them. The stamps do not cover `index.html` itself: a cached
+page keeps asking for its old stamps, and the server ignores the query and
+answers with the current file, so for as long as the page stays cached it can
+run against newer JS or data. (How long the edge keeps `index.html`, now
+about 4 hours, is a cache rule in Cloudflare, not in this repo.) After
 editing `assets/`, `data/` or `lyrics/*.lrc`, refresh the hashes (the tests
 fail until you do):
 
