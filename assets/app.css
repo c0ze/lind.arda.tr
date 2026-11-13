@@ -49,7 +49,9 @@
 
 /* --- base --------------------------------------------------------------- */
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+/* scroll-padding-top: anything scrolled into view (keyboard focus, section
+   links, share links) lands below the sticky top bar (about 48px) */
+html { scroll-behavior: smooth; scroll-padding-top: 3.5rem; }
 body {
   margin: 0;
   background: var(--bg);
@@ -201,6 +203,9 @@ section.stage, section.archive, section.colophon {
 .track[aria-current="true"] .track__rom { color: var(--accent); }
 
 /* --- stage: now playing + lyrics --------------------------------------- */
+/* a share link or "listen" scrolls here: title, lyrics and controls in view
+   (a small gap on top of the page's scroll-padding-top; the two add up) */
+.player { scroll-margin-top: 0.5rem; }
 .np { text-align: center; margin-bottom: 1.4rem; }
 .np__teng { font-family: var(--font-teng); font-size: 2.1rem; color: var(--accent-2); line-height: 1.9; }
 .np__rom { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 0.05em; margin-top: 0.2rem; }

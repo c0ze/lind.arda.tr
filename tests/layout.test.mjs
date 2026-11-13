@@ -51,3 +51,24 @@ test('printing shows every revealed block, scrolled to or not', () => {
   assert.match(print, /\.reveal\s*\{[^}]*opacity:\s*1/);
   assert.match(print, /\.reveal\s*\{[^}]*transform:\s*none/);
 });
+
+/* The declarations of the first top-level rule for exactly `selector`. */
+function rule(selector) {
+  const re = new RegExp('(^|\\n)' + selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}');
+  const m = re.exec(css);
+  return m ? m[2] : '';
+}
+const rem = (decls, prop) => {
+  const m = new RegExp(prop + ':\\s*([\\d.]+)rem').exec(decls);
+  return m ? Number(m[1]) : 0;
+};
+
+test('scrolling to an element (focus, anchors, share links) clears the sticky top bar', () => {
+  // the bar is about 46-48px; 1rem is 16px at the root
+  const padding = rem(rule('html'), 'scroll-padding-top');
+  assert.ok(padding * 16 >= 50, 'html scroll-padding-top clears the top bar');
+  // the player block adds only a small gap on top of that padding (the two add
+  // up), so title, lyrics window and controls still fit a 667px-high phone
+  const margin = rem(rule('.player'), 'scroll-margin-top');
+  assert.ok(margin > 0 && (padding + margin) * 16 <= 72, `${padding}rem + ${margin}rem`);
+});

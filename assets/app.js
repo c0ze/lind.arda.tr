@@ -152,7 +152,7 @@
       '<header class="section-head reveal"><p class="section-kicker">the stage</p>' +
       '<h2>Listen</h2><p class="section-lede">Choose a song. With the sound on, the lyrics light line by line — Tengwar, Sindarin, or English.</p></header>' +
       '<div class="tracklist reveal">' + tracks + '</div>' +
-      '<div class="reveal"><div class="np">' +
+      '<div class="player reveal"><div class="np">' +
         '<div class="np__teng" data-np="teng" aria-hidden="true"></div>' +
         '<div class="np__rom" data-np="rom" lang="sjn"></div>' +
         '<div class="np__en" data-np="en"></div></div>' +
@@ -617,6 +617,22 @@
       });
     });
 
+    /* The block from the now-playing title to the view toggle: what a share
+       link or an archive "listen" should land on (its scroll-margin-top and
+       the page's scroll-padding-top keep it clear of the sticky top bar). */
+    var playerBlock = el.querySelector(".player");
+    function showPlayerBlock(opts) {
+      /* Reveal it at once, without the slide: the scroll measures the box as
+         drawn, and a block still 18px down mid-fade would end up under the bar. */
+      if (!playerBlock.classList.contains("in")) {
+        playerBlock.style.transition = "none";
+        playerBlock.classList.add("in");
+        void playerBlock.offsetHeight;
+        playerBlock.style.transition = "";
+      }
+      try { playerBlock.scrollIntoView(opts); }
+      catch (e) { playerBlock.scrollIntoView(true); }
+    }
     function followShareLink(link, onLoad) {
       if (link.i !== state.i) selectTrack(link.i, link.t);
       else if (link.t != null) {
@@ -626,8 +642,7 @@
       }
       // On page load jump straight there: a smooth scroll (html has
       // scroll-behavior: smooth) can be cut short while the page settles.
-      try { el.scrollIntoView(onLoad ? { block: "start", behavior: "instant" } : { block: "start" }); }
-      catch (e) { el.scrollIntoView(true); }
+      showPlayerBlock(onLoad ? { block: "start", behavior: "instant" } : { block: "start" });
     }
     var link = readShareLink();
     selectTrack(link ? link.i : 0, link && link.t);
@@ -636,7 +651,7 @@
       var next = readShareLink();
       if (next) followShareLink(next);
     });
-    window.ardaPlay = function (i) { selectTrack(i); document.getElementById("stage").scrollIntoView(); startPlay(); };
+    window.ardaPlay = function (i) { selectTrack(i); showPlayerBlock({ block: "start" }); startPlay(); };
   }
 
   /* --- the archive ------------------------------------------------------ */

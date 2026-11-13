@@ -59,9 +59,14 @@ test('an unknown song id drops the time instead of seeking the first track', asy
 
 test('a share link brings the player into view and shows the linked time', async (t) => {
   const p = await player(t, { hash: '#t=1:30&song=b' });
-  assert.ok(p.scrolled.includes(p.query('#stage')));
+  // the block from the now-playing title to the controls, not the stage heading
+  const block = p.query('#stage .player');
+  assert.ok(block && block.contains(p.query('.np')) && block.contains(p.query('.lyrics')) && block.contains(p.query('.btn-play')));
+  assert.ok(p.scrolled.includes(block));
+  assert.ok(!p.scrolled.includes(p.query('#stage')));
+  assert.equal(p.scrollOptions[p.scrolled.indexOf(block)]?.block, 'start');
   // instant on page load: a smooth scroll started during load can be cut short
-  assert.equal(p.scrollOptions[p.scrolled.indexOf(p.query('#stage'))]?.behavior, 'instant');
+  assert.equal(p.scrollOptions[p.scrolled.indexOf(block)]?.behavior, 'instant');
   assert.equal(p.query('.time--cur').textContent, '1:30');
 });
 
@@ -77,7 +82,7 @@ test('a share link followed after load switches song and time', async (t) => {
   p.w.dispatchEvent(new p.w.HashChangeEvent('hashchange'));
   assert.equal(p.current(), 1);
   assert.equal(p.query('.time--cur').textContent, '0:42');
-  assert.ok(p.scrolled.includes(p.query('#stage')));
+  assert.ok(p.scrolled.includes(p.query('#stage .player')));
   p.query('.btn-play').click();
   assert.equal(p.audio.currentTime, 42);
 });
@@ -107,4 +112,24 @@ test('the reset to 0 after a src change does not hide the waiting link time', as
   p.audio.currentTime = 0;
   p.audio.emit('timeupdate');
   assert.equal(p.query('.time--cur').textContent, '0:42');
+});
+
+test("the archive's listen button brings the player block into view and plays", async (t) => {
+  const p = await player(t);
+  p.query('#archive [data-play="1"]').click();
+  assert.equal(p.current(), 1);
+  assert.equal(p.audio.paused, false);
+  const block = p.query('#stage .player');
+  assert.ok(p.scrolled.includes(block));
+  assert.ok(!p.scrolled.includes(p.query('#stage')));
+  assert.equal(p.scrollOptions[p.scrolled.indexOf(block)]?.block, 'start');
+});
+
+test('a share link shows the player block at once, not mid-fade under the top bar', async (t) => {
+  const p = await player(t, { hash: '#t=1:30&song=b', reduce: false, before(w) {
+    w.IntersectionObserver = class { observe() {} unobserve() {} disconnect() {} };   // never fires
+  } });
+  const block = p.query('#stage .player');
+  assert.ok(block.classList.contains('in'));
+  assert.equal(block.style.transition, '', 'the fade is suppressed only for that one change');
 });
