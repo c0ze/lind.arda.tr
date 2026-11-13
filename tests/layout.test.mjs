@@ -83,3 +83,12 @@ test('hover styles apply only where there is a real hover (they stick after a ta
   // the tapped lyric line in particular must not stay bright once it is no longer active
   assert.ok(hoverBlocks.some((b) => /\.lyric:hover/.test(b)));
 });
+
+test("Firefox's own range track is transparent, so the progress fill behind it shows", () => {
+  for (const slider of ['.scrub', '.vol__slider']) {
+    const m = new RegExp(slider.replace('.', '\\.') + '::-moz-range-track[^{]*\\{([^}]*)\\}|' +
+      '[^{}]*' + slider.replace('.', '\\.') + '::-moz-range-track[^{]*\\{([^}]*)\\}').exec(css);
+    assert.ok(m, slider);
+    assert.match(m[1] || m[2], /background(-color)?:\s*transparent/, slider);
+  }
+});

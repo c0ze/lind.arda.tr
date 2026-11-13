@@ -280,6 +280,9 @@ section.stage, section.archive, section.colophon {
 .btn-share.is-copied { color: var(--accent); }
 .scrub::-webkit-slider-thumb, .vol__slider::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%;
   background: var(--accent-bright); box-shadow: 0 0 10px var(--glow); cursor: pointer; }
+/* Firefox draws its own track over the input's background, which is where the
+   filled part is painted: make it see-through */
+.scrub::-moz-range-track, .vol__slider::-moz-range-track { background: transparent; border: none; }
 .scrub::-moz-range-thumb, .vol__slider::-moz-range-thumb { width: 13px; height: 13px; border: none; border-radius: 50%;
   background: var(--accent-bright); box-shadow: 0 0 10px var(--glow); cursor: pointer; }
 
