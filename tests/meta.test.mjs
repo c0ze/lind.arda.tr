@@ -35,8 +35,12 @@ test('the JSON-LD album lists exactly the songs in data/songs.js', () => {
   assert.equal(album['@type'], 'MusicAlbum');
   assert.equal(album.url, SITE);
   assert.equal(album.numTracks, SONGS.length);
-  assert.equal(album.creator?.['@type'], 'Person');
-  assert.equal(album.creator?.['@id'], 'https://arda.tr/#person');
+  assert.deepEqual(album.creator, {
+    '@type': 'Person',
+    '@id': 'https://arda.tr/#person',
+    name: 'Arda Karaduman',
+    url: 'https://arda.tr/',
+  });
   assert.deepEqual(album.track, Array.from(SONGS, (s) => ({
     '@type': 'MusicRecording',
     name: s.title,
